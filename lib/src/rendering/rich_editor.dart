@@ -27,14 +27,18 @@ class _RichEditorState extends State<RichEditor> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        GroupedTab(),
+        GroupedTab(
+          controller: _controller,
+        ),
         Flexible(
           child: WebView(
             initialUrl: 'file:///android_asset/flutter_assets/packages/rich_editor/assets/editor/editor.html',
             onWebViewCreated: (WebViewController controller) {
-              _controller = _controller;
+              _controller = controller;
+              // print();
               setState(() {});
             },
+            javascriptMode: JavascriptMode.unrestricted,
           ),
           // child: InAppWebView(
           //   initialFile: 'packages/rich_editor/assets/editor/index.html',

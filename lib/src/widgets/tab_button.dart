@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 class TabButton extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Function? onTap;
 
-  TabButton({this.icon = Icons.format_bold});
+  TabButton({this.icon, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +23,7 @@ class TabButton extends StatelessWidget {
           type: MaterialType.transparency,
           child: InkWell(
             borderRadius: BorderRadius.all(Radius.circular(5.0)),
-            onTap: () {},
+            onTap: () => onTap!(),
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.all(5.0),

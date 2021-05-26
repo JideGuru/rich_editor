@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:rich_editor/constants.dart';
+import 'package:rich_editor/src/utils/constants.dart';
 import 'package:rich_editor/src/models/button.dart';
 import 'package:rich_editor/src/widgets/tab_button.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -22,14 +22,15 @@ class GroupedTab extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               children: [
                 for(Button button in buttons)
-                  InkWell(
-                    onTap: () {
+                  TabButton(
+                    icon: button.icon,
+                    onTap: () async {
                       print('BOLDDD');
-                      controller?.evaluateJavascript('setBold()');
+                      // await controller?.evaluateJavascript('editor.undo()');
+                      await controller?.evaluateJavascript('editor.setBold()');
+                      String? html = await controller?.evaluateJavascript('editor.getEncodedHtml()');
+                      print(Uri.decodeFull(html!));
                     },
-                    child: TabButton(
-                      icon: button.icon,
-                    ),
                   )
               ],
             ),
