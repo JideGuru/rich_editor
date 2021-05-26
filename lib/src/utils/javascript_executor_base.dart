@@ -2,19 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-class JavaScriptExecutorBase {
-  static executeJavascript(WebViewController controller, String command) async {
-    return await controller.evaluateJavascript('editor.$command');
+class JavascriptExecutorBase {
+  WebViewController? _controller;
+
+  init(WebViewController controller) {
+    _controller = controller;
   }
 
-  static setHtml(WebViewController controller, String html) async {
+  executeJavascript(String command) async {
+    return await _controller!.evaluateJavascript('editor.$command');
+  }
+
+  setHtml(String html) async {
     String? baseUrl;
     await executeJavascript(
-        controller, "setHtml('" + encodeHtml(html) + "', '$baseUrl');");
+        "setHtml('" + encodeHtml(html) + "', '$baseUrl');");
   }
 
-  static getHtml(WebViewController controller) async {
-    String? html = await executeJavascript(controller, 'getEncodedHtml()');
+  getHtml() async {
+    String? html = await executeJavascript('getEncodedHtml()');
     String? decodedHtml = Uri.decodeFull(html!);
     if (decodedHtml.startsWith('"') && decodedHtml.endsWith('"')) {
       decodedHtml = decodedHtml.substring(1, decodedHtml.length - 1);
@@ -23,104 +29,136 @@ class JavaScriptExecutorBase {
   }
 
   // Text commands
-  static undo(WebViewController controller) async {
-    await executeJavascript(controller, "undo()");
+  undo() async {
+    await executeJavascript("undo()");
   }
 
-  static redo(WebViewController controller) async {
-    await executeJavascript(controller, "redo()");
+  redo() async {
+    await executeJavascript("redo()");
   }
 
-  static setBold(WebViewController controller) async {
-    await executeJavascript(controller, "setBold()");
+  setBold() async {
+    await executeJavascript("setBold()");
   }
 
-  static setItalic(WebViewController controller) async {
-    await executeJavascript(controller, "setItalic()");
+  setItalic() async {
+    await executeJavascript("setItalic()");
   }
 
-  static setUnderline(WebViewController controller) async {
-    await executeJavascript(controller, "setUnderline()");
+  setUnderline() async {
+    await executeJavascript("setUnderline()");
   }
 
-  static setSubscript(WebViewController controller) async {
-    await executeJavascript(controller, "setSubscript()");
+  setSubscript() async {
+    await executeJavascript("setSubscript()");
   }
 
-  static setSuperscript(WebViewController controller) async {
-    await executeJavascript(controller, "setSuperscript()");
+  setSuperscript() async {
+    await executeJavascript("setSuperscript()");
   }
 
-  static setStrikeThrough(WebViewController controller) async {
-    await executeJavascript(controller, "setStrikeThrough()");
+  setStrikeThrough() async {
+    await executeJavascript("setStrikeThrough()");
   }
 
-  static setTextColor(WebViewController controller, Color? color) async {
+  setTextColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript(controller, "setTextColor('$hex')");
+    await executeJavascript("setTextColor('$hex')");
   }
 
-  static setFontName(WebViewController controller, String fontName) async {
-    await executeJavascript(controller, "setFontName('$fontName')");
+  setFontName(String fontName) async {
+    await executeJavascript("setFontName('$fontName')");
   }
 
-  static setFontSize(WebViewController controller, int fontSize) async {
+  setFontSize(int fontSize) async {
     if (fontSize < 1 || fontSize > 7) {
       throw ("Font size should have a value between 1-7");
     }
-    await executeJavascript(controller, "setFontSize('$fontSize')");
+    await executeJavascript("setFontSize('$fontSize')");
   }
 
-  static setHeading(WebViewController controller, int heading) async {
-    await executeJavascript(controller, "setHeading('$heading')");
+  setHeading(int heading) async {
+    await executeJavascript("setHeading('$heading')");
   }
 
-  static setFormattingToParagraph(WebViewController controller) async {
-    await executeJavascript(controller, "setFormattingToParagraph()");
+  setFormattingToParagraph() async {
+    await executeJavascript("setFormattingToParagraph()");
   }
 
-  static setPreformat(WebViewController controller) async {
-    await executeJavascript(controller, "setPreformat()");
+  setPreformat() async {
+    await executeJavascript("setPreformat()");
   }
 
-  static setBlockQuote(WebViewController controller) async {
-    await executeJavascript(controller, "setBlockQuote()");
+  setBlockQuote() async {
+    await executeJavascript("setBlockQuote()");
   }
 
-  static removeFormat(WebViewController controller) async {
-    await executeJavascript(controller, "removeFormat()");
+  removeFormat() async {
+    await executeJavascript("removeFormat()");
   }
 
-  static setJustifyLeft(WebViewController controller) async {
-    await executeJavascript(controller, "setJustifyLeft()");
+  setJustifyLeft() async {
+    await executeJavascript("setJustifyLeft()");
   }
 
-  static setJustifyCenter(WebViewController controller) async {
-    await executeJavascript(controller, "setJustifyCenter()");
+  setJustifyCenter() async {
+    await executeJavascript("setJustifyCenter()");
   }
 
-  static setJustifyRight(WebViewController controller) async {
-    await executeJavascript(controller, "setJustifyRight()");
+  setJustifyRight() async {
+    await executeJavascript("setJustifyRight()");
   }
 
-  static setJustifyFull(WebViewController controller) async {
-    await executeJavascript(controller, "setJustifyFull()");
+  setJustifyFull() async {
+    await executeJavascript("setJustifyFull()");
   }
 
-  static setIndent(WebViewController controller) async {
-    await executeJavascript(controller, "setIndent()");
+  setIndent() async {
+    await executeJavascript("setIndent()");
   }
 
-  static setOutdent(WebViewController controller) async {
-    await executeJavascript(controller, "setOutdent()");
+  setOutdent() async {
+    await executeJavascript("setOutdent()");
   }
 
-  static insertBulletList(WebViewController controller) async {
-    await executeJavascript(controller, "insertBulletList()");
+  insertBulletList() async {
+    await executeJavascript("insertBulletList()");
   }
 
-  static insertNumberedList(WebViewController controller) async {
-    await executeJavascript(controller, "insertNumberedList()");
+  insertNumberedList() async {
+    await executeJavascript("insertNumberedList()");
+  }
+
+  // Insert element
+  insertLink(String url, String title) async {
+    await executeJavascript("insertLink('$url', '$title')");
+  }
+
+  /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
+  /// Rotation can be one of the following values: 0, 90, 180, 270.
+  insertImage(String url, String alt,
+      String? width, String? height, int? rotation) async {
+    if (rotation == null) rotation = 0;
+    await executeJavascript(
+      "insertImage('$url', '$alt', '$width', '$height', $rotation)",
+    );
+  }
+
+  insertCheckbox(String text) async {
+    await executeJavascript("insertCheckbox('$text')");
+  }
+
+  insertHtml(String html) async {
+    String? encodedHtml = encodeHtml(html);
+    await executeJavascript("insertHtml('$encodedHtml')");
+  }
+
+  makeImagesResizeable() async {
+    await executeJavascript("makeImagesResizeable()");
+  }
+
+  disableImageResizing() async {
+    await executeJavascript("disableImageResizing()");
   }
 
   static decodeHtml(String html) {

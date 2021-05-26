@@ -17,6 +17,7 @@ class _RichEditorState extends State<RichEditor> {
 
   int port = 5321;
   LocalServer? localServer;
+
   @override
   void initState() {
     super.initState();
@@ -27,15 +28,14 @@ class _RichEditorState extends State<RichEditor> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        GroupedTab(
-          controller: _controller,
-        ),
+        GroupedTab(controller: _controller),
         Flexible(
           child: WebView(
-            initialUrl: 'file:///android_asset/flutter_assets/packages/rich_editor/assets/editor/editor.html',
+            initialUrl:
+                'file:///android_asset/flutter_assets/packages/rich_editor/assets/editor/editor.html',
             onWebViewCreated: (WebViewController controller) {
               _controller = controller;
-              // print();
+              print('WebView created');
               setState(() {});
             },
             javascriptMode: JavascriptMode.unrestricted,
