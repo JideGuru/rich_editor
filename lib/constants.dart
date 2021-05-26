@@ -1,0 +1,32 @@
+import 'package:flutter/material.dart';
+import 'package:rich_editor/src/models/button.dart';
+
+List<Button> buttons = [
+  Button(icon: Icons.format_bold),
+  Button(icon: Icons.format_italic),
+  Button(icon: Icons.format_underline),
+  Button(icon: Icons.format_strikethrough),
+  Button(icon: Icons.superscript),
+  Button(icon: Icons.subscript),
+  Button(icon: Icons.format_clear),
+  Button(icon: Icons.undo),
+  Button(icon: Icons.redo),
+  Button(icon: Icons.format_quote),
+  Button(icon: Icons.text_format),
+  Button(icon: Icons.font_download),
+  Button(icon: Icons.format_size),
+  Button(icon: Icons.format_color_text),
+  Button(icon: Icons.format_color_fill),
+  Button(icon: Icons.format_indent_decrease),
+  Button(icon: Icons.format_indent_increase),
+  Button(icon: Icons.format_align_left_outlined),
+  Button(icon: Icons.format_align_center),
+  Button(icon: Icons.format_align_right),
+  Button(icon: Icons.format_align_justify),
+  Button(icon: Icons.format_list_bulleted),
+  Button(icon: Icons.format_list_numbered),
+  Button(icon: Icons.link),
+  Button(icon: Icons.image),
+  Button(icon: Icons.check_box_outlined),
+  Button(icon: Icons.search),
+];
