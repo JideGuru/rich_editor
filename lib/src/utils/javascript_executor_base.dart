@@ -15,8 +15,7 @@ class JavascriptExecutorBase {
 
   setHtml(String html) async {
     String? baseUrl;
-    await executeJavascript(
-        "setHtml('" + encodeHtml(html) + "', '$baseUrl');");
+    await executeJavascript("setHtml('" + encodeHtml(html) + "', '$baseUrl');");
   }
 
   getHtml() async {
@@ -64,6 +63,11 @@ class JavascriptExecutorBase {
   setTextColor(Color? color) async {
     String? hex = color!.toHexColorString();
     await executeJavascript("setTextColor('$hex')");
+  }
+
+  setTextBackgroundColor(Color? color) async {
+    String? hex = color!.toHexColorString();
+    await executeJavascript("setTextBackgroundColor('$hex')");
   }
 
   setFontName(String fontName) async {
@@ -136,9 +140,12 @@ class JavascriptExecutorBase {
 
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
   /// Rotation can be one of the following values: 0, 90, 180, 270.
-  insertImage(String url, String alt,
-      String? width, String? height, int? rotation) async {
+  insertImage(String url,
+      {String? alt, int? width, int? height, int? rotation}) async {
     if (rotation == null) rotation = 0;
+    if (width == null) width = 300;
+    if (height == null) height = 300;
+    if (alt == null) alt = '';
     await executeJavascript(
       "insertImage('$url', '$alt', '$width', '$height', $rotation)",
     );

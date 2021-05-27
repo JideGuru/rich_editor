@@ -29,7 +29,7 @@ class TabButton extends StatelessWidget {
                 padding: const EdgeInsets.all(5.0),
                 child: Icon(
                   icon,
-                  color: Colors.white,
+                  color: Theme.of(context).accentColor,
                 ),
               ),
             ),

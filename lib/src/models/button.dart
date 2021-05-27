@@ -2,7 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class Button {
-  IconData icon;
+  IconData? icon;
+  Function? onTap;
 
-  Button({this.icon = Icons.format_bold});
+  Button({this.icon, this.onTap});
 }

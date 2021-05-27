@@ -17,8 +17,9 @@ class GroupedTab extends StatelessWidget {
     if (controller != null) {
       javascriptExecutorBase.init(controller!);
     }
+
     return Container(
-      color: Color(0xff424242),
+      // color: Color(0xff424242),
       height: 59.0,
       child: Column(
         children: [
@@ -27,29 +28,13 @@ class GroupedTab extends StatelessWidget {
               shrinkWrap: true,
               scrollDirection: Axis.horizontal,
               children: [
-                for(Button button in buttons)
+                for (Button button in buttons)
                   TabButton(
                     icon: button.icon,
                     onTap: () async {
-                      print('BOLDDD');
-                      javascriptExecutorBase.setBold();
-                      String? html = await javascriptExecutorBase.getHtml();
-                      print(html!);
+                      button.onTap!(javascriptExecutorBase);
                     },
                   )
-                // TabButton(
-                //   icon: Icons.link,
-                //   onTap: () async {
-                //     javascriptExecutorBase.insertLink(
-                //         'https://github.com/JideGuru/rich_editor', 'git');
-                //   },
-                // ),
-                // TabButton(
-                //   icon: Icons.format_bold,
-                //   onTap: () async {
-                //     javascriptExecutorBase.setBold();
-                //   },
-                // )
               ],
             ),
           ),
