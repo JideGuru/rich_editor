@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
+import 'package:rich_editor/src/widgets/insert_image_dialog.dart';
 import 'package:rich_editor/src/widgets/insert_link_dialog.dart';
 import 'package:rich_editor/src/widgets/tab_button.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -49,16 +50,75 @@ class GroupedTab extends StatelessWidget {
                         return InsertLinkDialog();
                       },
                     );
-                    if(link != null)
+                    if (link != null)
                       await javascriptExecutorBase.insertLink(link[0], link[1]);
                   },
                 ),
                 TabButton(
                   icon: Icons.image,
                   onTap: () async {
-                    await javascriptExecutorBase.insertImage(
-                      'https://avatars.githubusercontent.com/u/24323581?v=4'
+                    var link = await showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) {
+                        return InsertImageDialog();
+                      },
                     );
+                    if (link != null) {
+                      await javascriptExecutorBase.insertImage(
+                        link[0],
+                        alt: link[1],
+                      );
+                    }
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_underline,
+                  onTap: () async {
+                    await javascriptExecutorBase.setUnderline();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_strikethrough,
+                  onTap: () async {
+                    await javascriptExecutorBase.setStrikeThrough();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.superscript,
+                  onTap: () async {
+                    await javascriptExecutorBase.setSuperscript();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.subscript,
+                  onTap: () async {
+                    await javascriptExecutorBase.setSubscript();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_clear,
+                  onTap: () async {
+                    await javascriptExecutorBase.removeFormat();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.redo,
+                  onTap: () async {
+                    await javascriptExecutorBase.redo();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.undo,
+                  onTap: () async {
+                    await javascriptExecutorBase.undo();
+                  },
+                ),
+
+                TabButton(
+                  icon: Icons.format_quote,
+                  onTap: () async {
+                    await javascriptExecutorBase.setBlockQuote();
                   },
                 ),
               ],
