@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/services/local_server.dart';
 import 'package:rich_editor/src/widgets/tabs.dart';
@@ -65,7 +67,7 @@ class _RichEditorState extends State<RichEditor> {
     return Column(
       children: [
         GroupedTab(controller: _controller),
-        Flexible(
+        Expanded(
           child: WebView(
             key: _mapKey,
             // initialUrl:
@@ -82,6 +84,11 @@ class _RichEditorState extends State<RichEditor> {
               }
             },
             javascriptMode: JavascriptMode.unrestricted,
+            gestureNavigationEnabled: true,
+            gestureRecognizers: [
+              Factory(
+                      () => VerticalDragGestureRecognizer()..onUpdate = (_) {}),
+            ].toSet(),
             onWebResourceError: (e) {
               print("error ${e.description}");
             },

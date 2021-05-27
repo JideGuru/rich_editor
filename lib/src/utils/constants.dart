@@ -16,7 +16,7 @@ List<Button> buttons = [
   ),
   Button(
     icon: Icons.link,
-    onTap: (JavascriptExecutorBase javascriptExecutorBase) async {
+    onTap: (JavascriptExecutorBase javascriptExecutorBase, String link, String title) async {
       await javascriptExecutorBase.insertLink(
         'https://github.com/JideGuru',
         'Sample',
@@ -54,7 +54,11 @@ List<Button> buttons = [
     onTap: (JavascriptExecutorBase javascriptExecutorBase) async =>
         await javascriptExecutorBase.setSubscript(),
   ),
-  Button(icon: Icons.format_clear),
+  Button(
+    icon: Icons.format_clear,
+    onTap: (JavascriptExecutorBase javascriptExecutorBase) async =>
+        await javascriptExecutorBase.removeFormat(),
+  ),
   Button(
     icon: Icons.undo,
     onTap: (JavascriptExecutorBase javascriptExecutorBase) async =>
@@ -73,7 +77,7 @@ List<Button> buttons = [
   Button(
     icon: Icons.text_format,
     onTap: (JavascriptExecutorBase javascriptExecutorBase, String name) async =>
-        await javascriptExecutorBase.removeFormat(),
+        await javascriptExecutorBase.setPreformat(),
   ),
   Button(
     icon: Icons.font_download,
