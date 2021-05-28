@@ -13,7 +13,8 @@ dependencies:
   webview_flutter: ^2.0.4
   mime: ^1.0.0
   image_picker: ^0.7.5+3
-#  path_provider: ^2.0.2
+  flutter_html: ^2.0.0
+  flutter_colorpicker: ^0.4.0
 
 dev_dependencies:
   flutter_test:

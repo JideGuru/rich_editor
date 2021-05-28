@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
+import 'package:rich_editor/src/widgets/check_dialog.dart';
+import 'package:rich_editor/src/widgets/fonts_dialog.dart';
 import 'package:rich_editor/src/widgets/insert_image_dialog.dart';
 import 'package:rich_editor/src/widgets/insert_link_dialog.dart';
 import 'package:rich_editor/src/widgets/tab_button.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+import 'color_picker_dialog.dart';
+import 'heading_dialog.dart';
 
 class GroupedTab extends StatelessWidget {
   final WebViewController? controller;
@@ -102,6 +107,13 @@ class GroupedTab extends StatelessWidget {
                     await javascriptExecutorBase.removeFormat();
                   },
                 ),
+
+                TabButton(
+                  icon: Icons.undo,
+                  onTap: () async {
+                    await javascriptExecutorBase.undo();
+                  },
+                ),
                 TabButton(
                   icon: Icons.redo,
                   onTap: () async {
@@ -109,16 +121,148 @@ class GroupedTab extends StatelessWidget {
                   },
                 ),
                 TabButton(
-                  icon: Icons.undo,
-                  onTap: () async {
-                    await javascriptExecutorBase.undo();
-                  },
-                ),
-
-                TabButton(
                   icon: Icons.format_quote,
                   onTap: () async {
                     await javascriptExecutorBase.setBlockQuote();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.text_format,
+                  onTap: () async {
+                    var command = await showModalBottomSheet(
+                      isScrollControlled: true,
+                      context: context,
+                      builder: (_) {
+                        return HeadingDialog();
+                      },
+                    );
+                    if (command != null) {
+                      if (command == 'p') {
+                        await javascriptExecutorBase.setFormattingToParagraph();
+                      } else if (command == 'pre') {
+                        await javascriptExecutorBase.setPreformat();
+                      } else if (command == 'blockquote') {
+                        await javascriptExecutorBase.setBlockQuote();
+                      } else {
+                        await javascriptExecutorBase
+                            .setHeading(int.tryParse(command)!);
+                      }
+                    }
+                  },
+                ),
+                TabButton(
+                  icon: Icons.font_download,
+                  onTap: () async {
+                    var command = await showModalBottomSheet(
+                      isScrollControlled: true,
+                      context: context,
+                      builder: (_) {
+                        return FontsDialog();
+                      },
+                    );
+                    if (command != null)
+                      await javascriptExecutorBase.setFontName(command);
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_size,
+                  onTap: () async {
+                    await javascriptExecutorBase.setFontSize(7);
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_color_text,
+                  onTap: () async {
+                    var color = await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return ColorPickerDialog(color: Colors.blue);
+                      },
+                    );
+                    if (color != null)
+                      await javascriptExecutorBase.setTextColor(color);
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_color_fill,
+                  onTap: () async {
+                    var color = await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return ColorPickerDialog(color: Colors.blue);
+                      },
+                    );
+                    if (color != null)
+                      await javascriptExecutorBase
+                          .setTextBackgroundColor(color);
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_indent_increase,
+                  onTap: () async {
+                    await javascriptExecutorBase.setIndent();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_indent_decrease,
+                  onTap: () async {
+                    await javascriptExecutorBase.setOutdent();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_align_left_outlined,
+                  onTap: () async {
+                    await javascriptExecutorBase.setJustifyLeft();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_align_center,
+                  onTap: () async {
+                    await javascriptExecutorBase.setJustifyCenter();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_align_right,
+                  onTap: () async {
+                    await javascriptExecutorBase.setJustifyRight();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_align_justify,
+                  onTap: () async {
+                    await javascriptExecutorBase.setJustifyFull();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_list_bulleted,
+                  onTap: () async {
+                    await javascriptExecutorBase.insertBulletList();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.format_list_numbered,
+                  onTap: () async {
+                    await javascriptExecutorBase.insertNumberedList();
+                  },
+                ),
+                TabButton(
+                  icon: Icons.check_box_outlined,
+                  onTap: () async {
+                    var text = await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return CheckDialog();
+                      },
+                    );
+                    print(text);
+                    if(text != null)
+                      await javascriptExecutorBase.insertCheckbox(text);
+                  },
+                ),
+                TabButton(
+                  icon: Icons.search,
+                  onTap: () async {
+                    // await javascriptExecutorBase.insertNumberedList();
                   },
                 ),
               ],
