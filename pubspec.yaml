@@ -1,5 +1,5 @@
 name: rich_editor
-description: A new Flutter package.
+description: WYSIWYG editor for Flutter with a rich set of supported formatting options.
 version: 0.0.1
 homepage: https://github.com/JideGuru/rich_editor
 

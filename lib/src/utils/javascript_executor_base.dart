@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
+import 'package:rich_editor/src/models/enum.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+import 'command_state.dart';
 
 class JavascriptExecutorBase {
   WebViewController? _controller;
+
+  String defaultHtml = "<p>\u200B</p>";
+
+  String editorStateChangedCallbackScheme = "editor-state-changed-callback://";
+
+  String defaultEncoding = "UTF-8";
+
+  String? htmlField = "";
+  Map<CommandName, CommandState> commandStates = {};
 
   init(WebViewController controller) {
     _controller = controller;
@@ -13,18 +25,27 @@ class JavascriptExecutorBase {
     return await _controller!.evaluateJavascript('editor.$command');
   }
 
+  String getCachedHtml() {
+    return htmlField!;
+  }
+
   setHtml(String html) async {
     String? baseUrl;
     await executeJavascript("setHtml('" + encodeHtml(html) + "', '$baseUrl');");
+    htmlField = html;
   }
 
-  getHtml() async {
+  getCurrentHtml() async {
     String? html = await executeJavascript('getEncodedHtml()');
     String? decodedHtml = Uri.decodeFull(html!);
     if (decodedHtml.startsWith('"') && decodedHtml.endsWith('"')) {
       decodedHtml = decodedHtml.substring(1, decodedHtml.length - 1);
     }
     return decodedHtml;
+  }
+
+  bool isDefaultRichTextEditorHtml(String html) {
+    return defaultHtml == html;
   }
 
   // Text commands
