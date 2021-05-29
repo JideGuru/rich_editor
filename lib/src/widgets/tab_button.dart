@@ -14,8 +14,8 @@ class TabButton extends StatelessWidget {
       child: Tooltip(
         message: '$tooltip',
         child: Container(
-          height: 45.0,
-          width: 45.0,
+          height: 40.0,
+          width: 40.0,
           decoration: BoxDecoration(
             // color: Color(0xff212121),
             borderRadius: BorderRadius.all(

@@ -6,7 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/services/local_server.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
-import 'package:rich_editor/src/widgets/tabs.dart';
+import 'package:rich_editor/src/widgets/editor_tool_bar.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class RichEditor extends StatefulWidget {
@@ -76,9 +76,10 @@ class RichEditorState extends State<RichEditor> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        GroupedTab(
+        EditorToolBar(
           controller: _controller,
           getImageUrl: widget.getImageUrl,
+          javascriptExecutorBase: javascriptExecutorBase,
         ),
         Expanded(
           child: WebView(
@@ -111,9 +112,6 @@ class RichEditorState extends State<RichEditor> {
               print("error ${e.description}");
             },
           ),
-          // child: InAppWebView(
-          //   initialFile: 'packages/rich_editor/assets/editor/index.html',
-          // ),
         )
       ],
     );

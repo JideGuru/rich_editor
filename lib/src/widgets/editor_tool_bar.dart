@@ -13,24 +13,28 @@ import 'color_picker_dialog.dart';
 import 'font_size_dialog.dart';
 import 'heading_dialog.dart';
 
-class GroupedTab extends StatelessWidget {
+class EditorToolBar extends StatelessWidget {
   final WebViewController? controller;
   final Function(File image)? getImageUrl;
   final Function(File video)? getVideoUrl;
+  final JavascriptExecutorBase javascriptExecutorBase;
 
-  GroupedTab({this.controller, this.getImageUrl, this.getVideoUrl});
-
-  JavascriptExecutorBase javascriptExecutorBase = JavascriptExecutorBase();
+  EditorToolBar({
+    this.controller,
+    this.getImageUrl,
+    this.getVideoUrl,
+    required this.javascriptExecutorBase,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (controller != null) {
-      javascriptExecutorBase.init(controller!);
-    }
+    // if (controller != null) {
+    //   javascriptExecutorBase.init(controller!);
+    // }
 
     return Container(
       // color: Color(0xff424242),
-      height: 59.0,
+      height: 54.0,
       child: Column(
         children: [
           Flexible(
@@ -309,6 +313,7 @@ class GroupedTab extends StatelessWidget {
                       await javascriptExecutorBase.insertCheckbox(text);
                   },
                 ),
+
                 /// TODO: Implement Search feature
                 // TabButton(
                 //   tooltip: 'Search',
