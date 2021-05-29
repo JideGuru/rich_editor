@@ -15,16 +15,20 @@ class FontsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (Map font in fonts)
-          InkWell(
-            child: Html(data: font['title']),
-            onTap: () => Navigator.pop(context, font['id']),
-          )
-      ],
+    return AlertDialog(
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (Map font in fonts)
+              InkWell(
+                child: Html(data: font['title']),
+                onTap: () => Navigator.pop(context, font['id']),
+              )
+          ],
+        ),
+      ),
     );
   }
 }
