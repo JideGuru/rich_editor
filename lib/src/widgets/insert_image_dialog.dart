@@ -12,6 +12,7 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
   TextEditingController link = TextEditingController();
 
   TextEditingController alt = TextEditingController();
+  bool picked = false;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +43,7 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
           ),
         ),
       ],
-      onDone: () => Navigator.pop(context, [link.text, alt.text]),
+      onDone: () => Navigator.pop(context, [link.text, alt.text, picked]),
       onCancel: () => Navigator.pop(context),
     );
   }
@@ -57,6 +58,7 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
 
     if (image != null) {
       link.text = image.path;
+      picked = true;
     }
   }
 }

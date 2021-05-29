@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/check_dialog.dart';
@@ -13,8 +15,10 @@ import 'heading_dialog.dart';
 
 class GroupedTab extends StatelessWidget {
   final WebViewController? controller;
+  final Function(File image)? getImageUrl;
+  final Function(File video)? getVideoUrl;
 
-  GroupedTab({this.controller});
+  GroupedTab({this.controller, this.getImageUrl, this.getVideoUrl});
 
   JavascriptExecutorBase javascriptExecutorBase = JavascriptExecutorBase();
 
@@ -77,6 +81,9 @@ class GroupedTab extends StatelessWidget {
                       },
                     );
                     if (link != null) {
+                      if (getImageUrl != null && link[2]) {
+                        link[0] = await getImageUrl!(File(link[0]));
+                      }
                       await javascriptExecutorBase.insertImage(
                         link[0],
                         alt: link[1],
@@ -195,7 +202,8 @@ class GroupedTab extends StatelessWidget {
                       },
                     );
                     if (command != null)
-                      await javascriptExecutorBase.setFontSize(int.tryParse(command)!);
+                      await javascriptExecutorBase
+                          .setFontSize(int.tryParse(command)!);
                   },
                 ),
                 TabButton(
@@ -301,13 +309,14 @@ class GroupedTab extends StatelessWidget {
                       await javascriptExecutorBase.insertCheckbox(text);
                   },
                 ),
-                TabButton(
-                  tooltip: 'Search',
-                  icon: Icons.search,
-                  onTap: () async {
-                    // await javascriptExecutorBase.insertNumberedList();
-                  },
-                ),
+                /// TODO: Implement Search feature
+                // TabButton(
+                //   tooltip: 'Search',
+                //   icon: Icons.search,
+                //   onTap: () async {
+                //     // await javascriptExecutorBase.insertNumberedList();
+                //   },
+                // ),
               ],
             ),
           ),

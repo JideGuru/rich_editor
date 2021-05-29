@@ -1,25 +1,36 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/services/local_server.dart';
+import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/tabs.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class RichEditor extends StatefulWidget {
+  final String? value;
+  final Function(File image)? getImageUrl;
+  final Function(File video)? getVideoUrl;
+
+  RichEditor({Key? key, this.value, this.getImageUrl, this.getVideoUrl})
+      : super(key: key);
+
   @override
-  _RichEditorState createState() => _RichEditorState();
+  RichEditorState createState() => RichEditorState();
 }
 
-class _RichEditorState extends State<RichEditor> {
+class RichEditorState extends State<RichEditor> {
   WebViewController? _controller;
   String text = "";
   final Key _mapKey = UniqueKey();
   String assetPath = 'packages/rich_editor/assets/editor/editor.html';
 
   int port = 5321;
+  String html = '';
   LocalServer? localServer;
+  JavascriptExecutorBase javascriptExecutorBase = JavascriptExecutorBase();
 
   @override
   void initState() {
@@ -30,9 +41,9 @@ class _RichEditorState extends State<RichEditor> {
     }
   }
 
-  initServer() {
+  initServer() async {
     localServer = LocalServer(port);
-    localServer!.start(handleRequest);
+    await localServer!.start(handleRequest);
   }
 
   void handleRequest(HttpRequest request) {
@@ -44,7 +55,6 @@ class _RichEditorState extends State<RichEditor> {
       print('Exception in handleRequest: $e');
     }
   }
-
 
   @override
   void dispose() {
@@ -66,28 +76,36 @@ class _RichEditorState extends State<RichEditor> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        GroupedTab(controller: _controller),
+        GroupedTab(
+          controller: _controller,
+          getImageUrl: widget.getImageUrl,
+        ),
         Expanded(
           child: WebView(
             key: _mapKey,
-            // initialUrl:
-            //     'file:///android_asset/flutter_assets/packages/rich_editor/assets/editor/editor.html',
-            onWebViewCreated: (WebViewController controller) {
+            onWebViewCreated: (WebViewController controller) async {
               _controller = controller;
               print('WebView created');
               setState(() {});
               if (!Platform.isAndroid) {
                 print('Loading');
-                _loadHtmlFromAssets();
+                await _loadHtmlFromAssets();
               } else {
-                _controller!.loadUrl('file:///android_asset/flutter_assets/$assetPath');
+                await _controller!
+                    .loadUrl('file:///android_asset/flutter_assets/$assetPath');
+              }
+              javascriptExecutorBase.init(_controller!);
+              if (widget.value != null) {
+                // wait  1 second before setting the html
+                Timer(Duration(seconds: 1), () async {
+                  await javascriptExecutorBase.setHtml(widget.value!);
+                });
               }
             },
             javascriptMode: JavascriptMode.unrestricted,
             gestureNavigationEnabled: true,
             gestureRecognizers: [
-              Factory(
-                      () => VerticalDragGestureRecognizer()..onUpdate = (_) {}),
+              Factory(() => VerticalDragGestureRecognizer()..onUpdate = (_) {}),
             ].toSet(),
             onWebResourceError: (e) {
               print("error ${e.description}");
@@ -99,5 +117,33 @@ class _RichEditorState extends State<RichEditor> {
         )
       ],
     );
+  }
+
+  Future<String?> getHtml() async {
+    try {
+      html = await javascriptExecutorBase.getCurrentHtml();
+    } catch (e) {}
+    return html;
+  }
+
+  setHtml(String html) async {
+    return await javascriptExecutorBase.setHtml(html);
+  }
+
+  // Hide the keyboard using JavaScript since it's being opened in a WebView
+  // https://stackoverflow.com/a/8263376/10835183
+  unFocus() {
+    _controller!.evaluateJavascript('document.activeElement.blur();');
+  }
+
+  // Clear editor content using Javascript
+  clear() {
+    _controller!.evaluateJavascript('document.getElementById(\'editor\').innerHTML = "";');
+  }
+
+  // Focus and Show the keyboard using JavaScript
+  // https://stackoverflow.com/a/6809236/10835183
+  focus() {
+    _controller!.evaluateJavascript('document.getElementById(\'editor\').focus();');
   }
 }

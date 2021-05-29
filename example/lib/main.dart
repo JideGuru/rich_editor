@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:rich_editor/rich_editor.dart';
 
@@ -28,11 +30,72 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  GlobalKey<RichEditorState> keyEditor = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: RichEditor(),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          PopupMenuButton(
+            child: IconButton(
+              icon: Icon(Icons.more_vert),
+              onPressed: null,
+              disabledColor: Colors.white,
+            ),
+            itemBuilder: (context) {
+              return [
+                PopupMenuItem(
+                  child: Text('Get HTML'),
+                  value: 0,
+                ),
+                PopupMenuItem(
+                  child: Text('Clear content'),
+                  value: 1,
+                ),
+                PopupMenuItem(
+                  child: Text('Hide keyboard'),
+                  value: 2,
+                ),
+                PopupMenuItem(
+                  child: Text('Show Keyboard'),
+                  value: 3,
+                ),
+              ];
+            },
+            onSelected: (val) async {
+              switch(val) {
+                case 0: {
+                  String? html = await keyEditor.currentState?.getHtml();
+                  print(html);
+                } break;
+                case 1: {
+                  await keyEditor.currentState?.clear();
+                } break;
+                case 2: {
+                  await keyEditor.currentState?.unFocus();
+                } break;
+                case 3: {
+                  await keyEditor.currentState?.focus();
+                } break;
+              }
+            },
+          ),
+        ],
+      ),
+      body: RichEditor(
+        key: keyEditor,
+        value: '<p> init html val </p>',
+        // You can return a Link (maybe you need to upload the image to your
+        // storage before displaying in the editor or you can also use base64
+        getImageUrl: (image) {
+          String link = 'https://avatars.githubusercontent.com/u/24323581?v=4';
+          String base64 = base64Encode(image.readAsBytesSync());
+          String base64String = 'data:image/png;base64, $base64';
+          return base64String;
+        },
+      ),
     );
   }
 }
