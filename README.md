@@ -1,6 +1,6 @@
 # ✨ rich_editor
 [![pub package](https://img.shields.io/pub/v/badge.svg)](https://pub.dartlang.org/packages/rich_editor)
-[![pub points](https://badges.bar/rich_editor/pub%20points)](https://pub.dev/packages/sentry/rich_editor)
+[![pub points](https://badges.bar/rich_editor/pub%20points)](https://pub.dev/packages/rich_editor/score)
 
 WYSIWYG editor for Android and JavaFX with a rich set of supported formatting options.
 
@@ -9,7 +9,7 @@ Based on https://github.com/dankito/RichTextEditor, but but for Flutter.
 ## ✨ Features
 - [x] Bold, Italic, Underline, Strike through, Subscript, Superscript
 - [x] Heading 1 - 6, Text body, Preformatted, Block quote
-- [] Font (reads all system fonts)
+- [ ] Font (reads all system fonts)
 - [x] Font Size
 - [x] Text Color
 - [x] Text Background Color
@@ -22,7 +22,7 @@ Based on https://github.com/dankito/RichTextEditor, but but for Flutter.
 - [x] Insert local or remote Image
 - [x] Insert Link
 - [x] Insert Checkbox
-- [] Search
+- [ ] Search
 
 ## 📸 Screenshots
 
