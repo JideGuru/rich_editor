@@ -8,12 +8,13 @@ import 'package:rich_editor/src/models/font.dart';
 import 'package:rich_editor/src/models/system_font.dart';
 import 'package:xml2json/xml2json.dart';
 
-// A simple port of FontListParser from Java to Kotlin
-// See https://stackoverflow.com/a/29533686/10835183
+/// A simple port of FontListParser from Java to Kotlin
+/// See https://stackoverflow.com/a/29533686/10835183
 class FontListParser {
   File androidFontsFile = File("/system/etc/fonts.xml");
   File androidSystemFontsFile = File("/system/etc/system_fonts.xml");
 
+  /// Gets fonts from the fonts xml files in the android system
   List<SystemFont> getSystemFonts() {
     String fontsXml;
     if (androidFontsFile.existsSync()) {
@@ -75,6 +76,7 @@ class FontListParser {
     return fonts;
   }
 
+  /// Gets font from the list defined incase the above function doesn't work
   List<SystemFont> safelyGetSystemFonts() {
     try {
       return getSystemFonts();

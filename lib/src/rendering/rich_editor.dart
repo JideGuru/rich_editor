@@ -11,10 +11,22 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 class RichEditor extends StatefulWidget {
   final String? value;
+  final Color? backgroundColor;
+  final Color? baseTextColor;
+  final EdgeInsets? padding;
+  final String? placeholder;
   final Function(File image)? getImageUrl;
   final Function(File video)? getVideoUrl;
 
-  RichEditor({Key? key, this.value, this.getImageUrl, this.getVideoUrl})
+  RichEditor(
+      {Key? key,
+      this.value,
+      this.backgroundColor,
+      this.baseTextColor,
+      this.padding,
+      this.placeholder,
+      this.getImageUrl,
+      this.getVideoUrl})
       : super(key: key);
 
   @override
@@ -86,22 +98,17 @@ class RichEditorState extends State<RichEditor> {
             key: _mapKey,
             onWebViewCreated: (WebViewController controller) async {
               _controller = controller;
-              print('WebView created');
               setState(() {});
               if (!Platform.isAndroid) {
-                print('Loading');
                 await _loadHtmlFromAssets();
               } else {
                 await _controller!
                     .loadUrl('file:///android_asset/flutter_assets/$assetPath');
               }
               javascriptExecutorBase.init(_controller!);
-              if (widget.value != null) {
-                // wait  1 second before setting the html
-                Timer(Duration(seconds: 1), () async {
-                  await javascriptExecutorBase.setHtml(widget.value!);
-                });
-              }
+            },
+            onPageFinished: (link) async {
+              await _setInitialValues();
             },
             javascriptMode: JavascriptMode.unrestricted,
             gestureNavigationEnabled: true,
@@ -115,6 +122,19 @@ class RichEditorState extends State<RichEditor> {
         )
       ],
     );
+  }
+
+  _setInitialValues() async {
+    if (widget.value != null)
+      await javascriptExecutorBase.setHtml(widget.value!);
+    if (widget.padding != null)
+      await javascriptExecutorBase.setPadding(widget.padding!);
+    if (widget.backgroundColor != null)
+      await javascriptExecutorBase.setBackgroundColor(widget.backgroundColor!);
+    if (widget.baseTextColor != null)
+      await javascriptExecutorBase.setBaseTextColor(widget.baseTextColor!);
+    if (widget.placeholder != null)
+      await javascriptExecutorBase.setPlaceholder(widget.placeholder!);
   }
 
   Future<String?> getHtml() async {
@@ -131,17 +151,18 @@ class RichEditorState extends State<RichEditor> {
   // Hide the keyboard using JavaScript since it's being opened in a WebView
   // https://stackoverflow.com/a/8263376/10835183
   unFocus() {
-    _controller!.evaluateJavascript('document.activeElement.blur();');
+    javascriptExecutorBase.unFocus();
   }
 
   // Clear editor content using Javascript
   clear() {
-    _controller!.evaluateJavascript('document.getElementById(\'editor\').innerHTML = "";');
+    _controller!.evaluateJavascript(
+        'document.getElementById(\'editor\').innerHTML = "";');
   }
 
   // Focus and Show the keyboard using JavaScript
   // https://stackoverflow.com/a/6809236/10835183
   focus() {
-    _controller!.evaluateJavascript('document.getElementById(\'editor\').focus();');
+    javascriptExecutorBase.focus();
   }
 }

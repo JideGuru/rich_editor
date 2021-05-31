@@ -65,20 +65,28 @@ class _MyHomePageState extends State<MyHomePage> {
               ];
             },
             onSelected: (val) async {
-              switch(val) {
-                case 0: {
-                  String? html = await keyEditor.currentState?.getHtml();
-                  print(html);
-                } break;
-                case 1: {
-                  await keyEditor.currentState?.clear();
-                } break;
-                case 2: {
-                  await keyEditor.currentState?.unFocus();
-                } break;
-                case 3: {
-                  await keyEditor.currentState?.focus();
-                } break;
+              switch (val) {
+                case 0:
+                  {
+                    String? html = await keyEditor.currentState?.getHtml();
+                    print(html);
+                  }
+                  break;
+                case 1:
+                  {
+                    await keyEditor.currentState?.clear();
+                  }
+                  break;
+                case 2:
+                  {
+                    await keyEditor.currentState?.unFocus();
+                  }
+                  break;
+                case 3:
+                  {
+                    await keyEditor.currentState?.focus();
+                  }
+                  break;
               }
             },
           ),
@@ -86,14 +94,18 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: RichEditor(
         key: keyEditor,
-        value: '''
-        <h1>Heading 1</h1>
-<h2>Heading 2</h2>
-<h3>Heading 3</h3>
-<h4>Heading 4</h4>
-<h5>Heading 5</h5>
-<h6>Heading 6</h6>
-        ''',
+//         value: '''
+//         <h1>Heading 1</h1>
+// <h2>Heading 2</h2>
+// <h3>Heading 3</h3>
+// <h4>Heading 4</h4>
+// <h5>Heading 5</h5>
+// <h6>Heading 6</h6>
+//         ''',
+        placeholder: 'Start typing',
+        // backgroundColor: Colors.blueGrey,
+        // baseTextColor: Colors.white,
+        padding: EdgeInsets.symmetric(horizontal: 50.0),
         // You can return a Link (maybe you need to upload the image to your
         // storage before displaying in the editor or you can also use base64
         getImageUrl: (image) {
