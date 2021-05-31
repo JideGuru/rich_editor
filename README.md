@@ -4,7 +4,7 @@
 
 WYSIWYG editor for Android and JavaFX with a rich set of supported formatting options.
 
-Based on https://github.com/dankito/RichTextEditor, but but for Flutter.
+Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 
 ## ✨ Features
 - [x] Bold, Italic, Underline, Strike through, Subscript, Superscript

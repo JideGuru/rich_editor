@@ -177,21 +177,27 @@ class EditorToolBar extends StatelessWidget {
                     }
                   },
                 ),
-                TabButton(
-                  tooltip: 'Font face',
-                  icon: Icons.font_download,
-                  onTap: () async {
-                    _closeKeyboard();
-                    var command = await showDialog(
-                      // isScrollControlled: true,
-                      context: context,
-                      builder: (_) {
-                        return FontsDialog();
-                      },
-                    );
-                    if (command != null)
-                      await javascriptExecutorBase.setFontName(command);
-                  },
+                // TODO: Show font button on iOS
+                Visibility(
+                  visible: Platform.isAndroid,
+                  child: TabButton(
+                    tooltip: 'Font face',
+                    icon: Icons.font_download,
+                    onTap: () async {
+                      Directory fontsDir = Directory("/system/fonts/");
+                      File file = File('/system/etc/fonts.xml');
+                      // debugPrint(await file.readAsString());
+                      var command = await showDialog(
+                        // isScrollControlled: true,
+                        context: context,
+                        builder: (_) {
+                          return FontsDialog();
+                        },
+                      );
+                      if (command != null)
+                        await javascriptExecutorBase.setFontName(command);
+                    },
+                  ),
                 ),
                 TabButton(
                   icon: Icons.format_size,

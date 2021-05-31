@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
+import 'package:rich_editor/src/models/editor_state.dart';
 import 'package:rich_editor/src/models/enum.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -15,6 +18,7 @@ class JavascriptExecutorBase {
   String defaultEncoding = "UTF-8";
 
   String? htmlField = "";
+  var didHtmlChange = false;
   Map<CommandName, CommandState> commandStates = {};
 
   init(WebViewController controller) {
@@ -196,4 +200,88 @@ class JavascriptExecutorBase {
   static encodeHtml(String html) {
     return Uri.encodeFull(html);
   }
+
+  // bool shouldOverrideUrlLoading(String url) {
+  //   String decodedUrl;
+  //   try {
+  //     decodedUrl = decodeHtml(url);
+  //   } catch (e) {
+  //     // No handling
+  //     return false;
+  //   }
+  //
+  //   if (url.indexOf(editorStateChangedCallbackScheme) == 0) {
+  //     editorStateChanged(
+  //         decodedUrl.substring(editorStateChangedCallbackScheme.length));
+  //     return true;
+  //   }
+  //
+  //   return false;
+  // }
+  //
+  // editorStateChanged(String statesString) {
+  //   try {
+  //     var editorState = EditorState.fromJson(jsonDecode(statesString));
+  //
+  //     bool currentHtmlChanged = this.htmlField != editorState.html;
+  //     this.htmlField = editorState.html;
+  //
+  //     retrievedEditorState(editorState.didHtmlChange, editorState.commandStates)
+  //
+  //     if (currentHtmlChanged) {
+  //       fireHtmlChangedListenersAsync(editorState.html);
+  //     }
+  //   }
+  //   catch (e) {
+  //     throw("Could not parse command states: $statesString $e");
+  //   }
+  // }
+  //
+  // retrievedEditorState(bool didHtmlChange,
+  //     Map<CommandName, CommandState> commandStates) {
+  //   if (this.didHtmlChange != didHtmlChange) {
+  //     this.didHtmlChange = didHtmlChange;
+  //     didHtmlChangeListeners.forEach {
+  //       it.didHtmlChange(didHtmlChange);
+  //     }
+  //   }
+  //
+  //   handleRetrievedCommandStates(commandStates)
+  // }
+  //
+  // handleRetrievedCommandStates(Map<CommandName, CommandState> commandStates) {
+  //   determineDerivedCommandStates(commandStates)
+  //
+  //   this.commandStates = commandStates;
+  //
+  //   commandStatesChangedListeners.forEach {
+  //     it.invoke(this.commandStates)
+  //   }
+  // }
+
+  // determineDerivedCommandStates(Map<CommandName, CommandState> commandStates) {
+  // commandStates[CommandName.FORMATBLOCK]?.let { formatCommandState ->
+  // commandStates.put(CommandName.H1, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h1")))
+  // commandStates.put(CommandName.H2, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h2")))
+  // commandStates.put(CommandName.H3, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h3")))
+  // commandStates.put(CommandName.H4, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h4")))
+  // commandStates.put(CommandName.H5, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h5")))
+  // commandStates.put(CommandName.H6, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h6")))
+  // commandStates.put(CommandName.P, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "p")))
+  // commandStates.put(CommandName.PRE, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "pre")))
+  // commandStates.put(CommandName.BR, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "")))
+  // commandStates.put(CommandName.BLOCKQUOTE, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "blockquote")))
+  // }
+  //
+  // commandStates[CommandName.INSERTHTML]?.let { insertHtmlState ->
+  // commandStates.put(CommandName.INSERTLINK, insertHtmlState)
+  // commandStates.put(CommandName.INSERTIMAGE, insertHtmlState)
+  // commandStates.put(CommandName.INSERTCHECKBOX, insertHtmlState)
+  // }
+  // }
+
+  // String isFormatActivated(CommandState formatCommandState, String format) {
+  //   return (formatCommandState.value == format)
+  //       .toString(); // rich_text_editor.js reports boolean values as string, so we also have to convert it to string
+  // }
 }
