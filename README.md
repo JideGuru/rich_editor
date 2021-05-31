@@ -25,8 +25,7 @@ Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 - [ ] Search
 
 ## 📸 Screenshots
-<img src="res/1.png" width="400">
-<img src="res/2.png" width="400">
+<img src="res/1.png" width="400"> <img src="res/2.png" width="400">
 
 ## Usage
 ```dart
