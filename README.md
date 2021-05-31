@@ -1,5 +1,5 @@
 # ✨ rich_editor
-[![pub package](https://img.shields.io/pub/v/badge.svg)](https://pub.dartlang.org/packages/rich_editor)
+[![pub package](https://img.shields.io/pub/v/rich_editor.svg)](https://pub.dartlang.org/packages/rich_editor)
 [![pub points](https://badges.bar/rich_editor/pub%20points)](https://pub.dev/packages/rich_editor/score)
 
 WYSIWYG editor for Android and JavaFX with a rich set of supported formatting options.
@@ -25,8 +25,24 @@ Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 - [ ] Search
 
 ## 📸 Screenshots
+<img src="res/1.png" width="400">
+<img src="res/2.png" width="400">
 
-
+## Usage
+```dart
+      RichEditor(
+        key: keyEditor,
+        value: 'initial html here',
+        // You can return a Link (maybe you need to upload the image to your
+        // storage before displaying in the editor or you can also use base64
+        getImageUrl: (image) {
+          String link = 'https://avatars.githubusercontent.com/u/24323581?v=4';
+          String base64 = base64Encode(image.readAsBytesSync());
+          String base64String = 'data:image/png;base64, $base64';
+          return base64String;
+        },
+      )
+```
 
 ## License
 

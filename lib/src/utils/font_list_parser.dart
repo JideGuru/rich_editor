@@ -38,11 +38,13 @@ class FontListParser {
             break;
           }
         }
-        SystemFont systemFont = new SystemFont(family.name!, font.t ?? '');
-        if (fonts.contains(systemFont)) {
-          continue;
+        if( font.t != null) {
+          SystemFont systemFont = new SystemFont(family.name!, font.t!);
+          if (fonts.contains(systemFont)) {
+            continue;
+          }
+          fonts.add(new SystemFont(family.name!, font.t!));
         }
-        fonts.add(new SystemFont(family.name!, font.t ?? ''));
       }
     }
 
