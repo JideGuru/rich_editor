@@ -2,14 +2,14 @@
 [![pub package](https://img.shields.io/pub/v/rich_editor.svg)](https://pub.dartlang.org/packages/rich_editor)
 [![pub points](https://badges.bar/rich_editor/pub%20points)](https://pub.dev/packages/rich_editor/score)
 
-WYSIWYG editor for Android and JavaFX with a rich set of supported formatting options.
+WYSIWYG editor for Flutter with a rich set of supported formatting options.
 
 Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 
 ## ✨ Features
 - [x] Bold, Italic, Underline, Strike through, Subscript, Superscript
 - [x] Heading 1 - 6, Text body, Preformatted, Block quote
-- [ ] Font (reads all system fonts)
+- [x] Font (reads all system fonts) (Android only)
 - [x] Font Size
 - [x] Text Color
 - [x] Text Background Color
@@ -23,12 +23,14 @@ Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 - [x] Insert Link
 - [x] Insert Checkbox
 - [ ] Search
+- [ ] Icon indicators
 
 ## 📸 Screenshots
-<img src="res/1.png" width="400"> <img src="res/2.png" width="400">
+<img src="https://github.com/JideGuru/rich_editor/raw/master/res/1.png" width="400"> <img src="https://github.com/JideGuru/rich_editor/raw/master/res/2.png" width="400">
 
 ## Usage
 ```dart
+      // Insert widget into tree
       RichEditor(
         key: keyEditor,
         value: 'initial html here',
@@ -41,6 +43,23 @@ Based on https://github.com/dankito/RichTextEditor, but for Flutter.
           return base64String;
         },
       )
+```
+
+Get current HTML from editor
+```dart
+String? html = await keyEditor.currentState?.getHtml();
+print(html);
+```
+
+Set Focus and Unfocus
+```dart
+await keyEditor.currentState?.focus();
+await keyEditor.currentState?.unFocus();
+```
+
+Clear Editor content
+```dart
+await keyEditor.currentState?.clear();
 ```
 
 ## License
