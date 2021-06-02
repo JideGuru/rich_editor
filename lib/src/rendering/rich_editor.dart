@@ -15,19 +15,21 @@ class RichEditor extends StatefulWidget {
   final Color? baseTextColor;
   final EdgeInsets? padding;
   final String? placeholder;
+  final String? baseFontFamily;
   final Function(File image)? getImageUrl;
   final Function(File video)? getVideoUrl;
 
-  RichEditor(
-      {Key? key,
-      this.value,
-      this.backgroundColor,
-      this.baseTextColor,
-      this.padding,
-      this.placeholder,
-      this.getImageUrl,
-      this.getVideoUrl})
-      : super(key: key);
+  RichEditor({
+    Key? key,
+    this.value,
+    this.backgroundColor,
+    this.baseTextColor,
+    this.padding,
+    this.placeholder,
+    this.baseFontFamily,
+    this.getImageUrl,
+    this.getVideoUrl,
+  }) : super(key: key);
 
   @override
   RichEditorState createState() => RichEditorState();
@@ -35,30 +37,29 @@ class RichEditor extends StatefulWidget {
 
 class RichEditorState extends State<RichEditor> {
   WebViewController? _controller;
-  String text = "";
   final Key _mapKey = UniqueKey();
   String assetPath = 'packages/rich_editor/assets/editor/editor.html';
 
   int port = 5321;
   String html = '';
   LocalServer? localServer;
-  JavascriptExecutorBase javascriptExecutorBase = JavascriptExecutorBase();
+  JavascriptExecutorBase javascriptExecutor = JavascriptExecutorBase();
 
   @override
   void initState() {
     super.initState();
     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
     if (!Platform.isAndroid) {
-      initServer();
+      _initServer();
     }
   }
 
-  initServer() async {
+  _initServer() async {
     localServer = LocalServer(port);
-    await localServer!.start(handleRequest);
+    await localServer!.start(_handleRequest);
   }
 
-  void handleRequest(HttpRequest request) {
+  void _handleRequest(HttpRequest request) {
     try {
       if (request.method == 'GET' &&
           request.uri.queryParameters['query'] == "getRawTeXHTML") {
@@ -91,7 +92,7 @@ class RichEditorState extends State<RichEditor> {
         EditorToolBar(
           controller: _controller,
           getImageUrl: widget.getImageUrl,
-          javascriptExecutorBase: javascriptExecutorBase,
+          javascriptExecutor: javascriptExecutor,
         ),
         Expanded(
           child: WebView(
@@ -105,7 +106,7 @@ class RichEditorState extends State<RichEditor> {
                 await _controller!
                     .loadUrl('file:///android_asset/flutter_assets/$assetPath');
               }
-              javascriptExecutorBase.init(_controller!);
+              javascriptExecutor.init(_controller!);
             },
             onPageFinished: (link) async {
               await _setInitialValues();
@@ -125,44 +126,70 @@ class RichEditorState extends State<RichEditor> {
   }
 
   _setInitialValues() async {
-    if (widget.value != null)
-      await javascriptExecutorBase.setHtml(widget.value!);
+    if (widget.value != null) await javascriptExecutor.setHtml(widget.value!);
     if (widget.padding != null)
-      await javascriptExecutorBase.setPadding(widget.padding!);
+      await javascriptExecutor.setPadding(widget.padding!);
     if (widget.backgroundColor != null)
-      await javascriptExecutorBase.setBackgroundColor(widget.backgroundColor!);
+      await javascriptExecutor.setBackgroundColor(widget.backgroundColor!);
     if (widget.baseTextColor != null)
-      await javascriptExecutorBase.setBaseTextColor(widget.baseTextColor!);
+      await javascriptExecutor.setBaseTextColor(widget.baseTextColor!);
     if (widget.placeholder != null)
-      await javascriptExecutorBase.setPlaceholder(widget.placeholder!);
+      await javascriptExecutor.setPlaceholder(widget.placeholder!);
+    if (widget.baseFontFamily != null)
+      await javascriptExecutor.setBaseFontFamily(widget.baseFontFamily!);
   }
 
+  /// Get current HTML from editor
   Future<String?> getHtml() async {
     try {
-      html = await javascriptExecutorBase.getCurrentHtml();
+      html = await javascriptExecutor.getCurrentHtml();
     } catch (e) {}
     return html;
   }
 
+  /// Set your HTML to the editor
   setHtml(String html) async {
-    return await javascriptExecutorBase.setHtml(html);
+    return await javascriptExecutor.setHtml(html);
   }
 
-  // Hide the keyboard using JavaScript since it's being opened in a WebView
-  // https://stackoverflow.com/a/8263376/10835183
+  /// Hide the keyboard using JavaScript since it's being opened in a WebView
+  /// https://stackoverflow.com/a/8263376/10835183
   unFocus() {
-    javascriptExecutorBase.unFocus();
+    javascriptExecutor.unFocus();
   }
 
-  // Clear editor content using Javascript
+  /// Clear editor content using Javascript
   clear() {
     _controller!.evaluateJavascript(
         'document.getElementById(\'editor\').innerHTML = "";');
   }
 
-  // Focus and Show the keyboard using JavaScript
-  // https://stackoverflow.com/a/6809236/10835183
+  /// Focus and Show the keyboard using JavaScript
+  /// https://stackoverflow.com/a/6809236/10835183
   focus() {
-    javascriptExecutorBase.focus();
+    javascriptExecutor.focus();
+  }
+
+  /// Add custom CSS code to Editor
+  loadCSS(String cssFile) {
+    var jsCSSImport = "(function() {" +
+        "    var head  = document.getElementsByTagName(\"head\")[0];" +
+        "    var link  = document.createElement(\"link\");" +
+        "    link.rel  = \"stylesheet\";" +
+        "    link.type = \"text/css\";" +
+        "    link.href = \"" +
+        cssFile +
+        "\";" +
+        "    link.media = \"all\";" +
+        "    head.appendChild(link);" +
+        "}) ();";
+    _controller!.evaluateJavascript(jsCSSImport);
+  }
+
+  /// if html is equal to html RichTextEditor sets by default at start
+  /// (<p>​</p>) so that RichTextEditor can be considered as 'empty'.
+  Future<bool> isEmpty() async {
+    html = await javascriptExecutor.getCurrentHtml();
+    return html == '<p>​</p>';
   }
 }

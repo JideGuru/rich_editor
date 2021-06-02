@@ -23,19 +23,13 @@ class FontsDialog extends StatelessWidget {
               InkWell(
                 child: Html(data: '<p style="font-family:${font.name}">'
                     '${basename(font.path!)}</p>'),
-                onTap: () => Navigator.pop(context, font.path),
+                onTap: () {
+                  Navigator.pop(context, font.name);
+                },
               )
           ],
         ),
       ),
     );
-  }
-
-  fontSlug(FileSystemEntity font) {
-    String name = basename(font.path);
-    String slug = name.toLowerCase();
-    slug = slug.replaceAll(extension(font.path), '');
-    // print(slug);
-    return slug;
   }
 }

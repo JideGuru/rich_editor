@@ -105,7 +105,8 @@ class _MyHomePageState extends State<MyHomePage> {
         placeholder: 'Start typing',
         // backgroundColor: Colors.blueGrey,
         // baseTextColor: Colors.white,
-        padding: EdgeInsets.symmetric(horizontal: 50.0),
+        padding: EdgeInsets.symmetric(horizontal: 5.0),
+        baseFontFamily: 'sans-serif',
         // You can return a Link (maybe you need to upload the image to your
         // storage before displaying in the editor or you can also use base64
         getImageUrl: (image) {

@@ -173,48 +173,52 @@ class JavascriptExecutorBase {
     if (height == null) height = 300;
     if (alt == null) alt = '';
     await executeJavascript(
-      "insertImage('$url', '$alt', '$width', '$height', $rotation)",
+      "insertImage('$url', '$alt', '$width', '$height', $rotation);",
     );
   }
 
   insertCheckbox(String text) async {
-    await executeJavascript("insertCheckbox('$text')");
+    await executeJavascript("insertCheckbox('$text');");
   }
 
   insertHtml(String html) async {
     String? encodedHtml = encodeHtml(html);
-    await executeJavascript("insertHtml('$encodedHtml')");
+    await executeJavascript("insertHtml('$encodedHtml');");
   }
 
   makeImagesResizeable() async {
-    await executeJavascript("makeImagesResizeable()");
+    await executeJavascript("makeImagesResizeable();");
   }
 
   disableImageResizing() async {
-    await executeJavascript("disableImageResizing()");
+    await executeJavascript("disableImageResizing();");
   }
 
   // Editor settings commands
   focus() async {
-    await executeJavascript("focus()");
+    await executeJavascript("focus();");
   }
 
   unFocus() async {
-    await executeJavascript("blurFocus()");
+    await executeJavascript("blurFocus();");
   }
 
   setBackgroundColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setBackgroundColor('$hex')");
+    await executeJavascript("setBackgroundColor('$hex');");
   }
 
   setBackgroundImage(String image) async {
-    await executeJavascript("setBackgroundImage('$image')");
+    await executeJavascript("setBackgroundImage('$image');");
   }
 
   setBaseTextColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setBaseTextColor('$hex')");
+    await executeJavascript("setBaseTextColor('$hex');");
+  }
+
+  setBaseFontFamily(String fontFamily) async {
+    await executeJavascript("setBaseFontFamily('$fontFamily');");
   }
 
   setPadding(EdgeInsets? padding) async {
@@ -222,11 +226,21 @@ class JavascriptExecutorBase {
     String top = padding.top.toString();
     String right = padding.right.toString();
     String bottom = padding.bottom.toString();
-    await executeJavascript("setPadding('$left', '$top', '$right', '$bottom')");
+    await executeJavascript(
+        "setPadding('${left}px', '${top}px', '${right}px', '${bottom}px');");
   }
 
+  // Doesnt actually work for' now
   setPlaceholder(String placeholder) async {
-    await executeJavascript("setPlaceholder('$placeholder')");
+    await executeJavascript("setPlaceholder('$placeholder');");
+  }
+
+  setEditorWidth(int px) async {
+    await executeJavascript("setWidth('" + px.toString() + "px');");
+  }
+
+  setEditorHeight(int px) async {
+    await executeJavascript("setHeight('" + px.toString() + "px');");
   }
 
   static decodeHtml(String html) {

@@ -8,7 +8,7 @@ import 'package:rich_editor/src/models/font.dart';
 import 'package:rich_editor/src/models/system_font.dart';
 import 'package:xml2json/xml2json.dart';
 
-/// A simple port of FontListParser from Java to Kotlin
+/// A simple port of FontListParser from Java to Dart
 /// See https://stackoverflow.com/a/29533686/10835183
 class FontListParser {
   File androidFontsFile = File("/system/etc/fonts.xml");
@@ -39,7 +39,7 @@ class FontListParser {
             break;
           }
         }
-        if( font.t != null) {
+        if (font.t != null) {
           SystemFont systemFont = new SystemFont(family.name!, font.t!);
           if (fonts.contains(systemFont)) {
             continue;
@@ -76,7 +76,7 @@ class FontListParser {
     return fonts;
   }
 
-  /// Gets font from the list defined incase the above function doesn't work
+  /// Gets font from the list defined in case the above function doesn't work
   List<SystemFont> safelyGetSystemFonts() {
     try {
       return getSystemFonts();
@@ -85,16 +85,16 @@ class FontListParser {
         ["cursive", "DancingScript-Regular.ttf"],
         ["monospace", "DroidSansMono.ttf"],
         ["sans-serif", "Roboto-Regular.ttf"],
-        ["sans-serif-light" "Roboto-Light.ttf"], 
-        ["sans-serif-medium", "Roboto-Medium.ttf"], 
-        ["sans-serif-black", "Roboto-Black.ttf"], 
-        ["sans-serif-condensed", "RobotoCondensed-Regular.ttf"], 
-        ["sans-serif-thin", "Roboto-Thin.ttf"], 
+        ["sans-serif-light" "Roboto-Light.ttf"],
+        ["sans-serif-medium", "Roboto-Medium.ttf"],
+        ["sans-serif-black", "Roboto-Black.ttf"],
+        ["sans-serif-condensed", "RobotoCondensed-Regular.ttf"],
+        ["sans-serif-thin", "Roboto-Thin.ttf"],
         ["serif", "NotoSerif-Regular.ttf"]
       ];
       List<SystemFont> fonts = <SystemFont>[];
       for (List names in defaultSystemFonts) {
-        File file = new File("/system/fonts/"+ names[1]);
+        File file = new File("/system/fonts/" + names[1]);
         if (file.existsSync()) {
           fonts.add(new SystemFont(names[0], file.path));
         }
