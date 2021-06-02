@@ -12,12 +12,11 @@ class Family {
     name = json['name'];
     if (json['font'] != null) {
       fonts = <Font>[];
-      if(json['font'] is List) {
+      if (json['font'] is List) {
         json['font'].forEach((v) {
           fonts!.add(new Font.fromJson(v));
         });
       }
-
     }
     lang = json['lang'];
     variant = json['variant'];

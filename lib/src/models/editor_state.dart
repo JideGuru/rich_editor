@@ -27,4 +27,3 @@ class EditorState {
     return data;
   }
 }
-
