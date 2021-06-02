@@ -183,7 +183,6 @@ class EditorToolBar extends StatelessWidget {
                           return FontsDialog();
                         },
                       );
-                      print(command);
                       if (command != null)
                         await javascriptExecutor.setFontName(command);
                     },
@@ -299,7 +298,6 @@ class EditorToolBar extends StatelessWidget {
                         return CheckDialog();
                       },
                     );
-                    print(text);
                     if (text != null)
                       await javascriptExecutor.insertCheckbox(text);
                   },

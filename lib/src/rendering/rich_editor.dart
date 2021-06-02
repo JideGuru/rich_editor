@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:rich_editor/src/models/enum.dart';
 import 'package:rich_editor/src/services/local_server.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/editor_tool_bar.dart';
@@ -16,6 +17,7 @@ class RichEditor extends StatefulWidget {
   final EdgeInsets? padding;
   final String? placeholder;
   final String? baseFontFamily;
+  final BarPosition barPosition;
   final Function(File image)? getImageUrl;
   final Function(File video)? getVideoUrl;
 
@@ -27,6 +29,7 @@ class RichEditor extends StatefulWidget {
     this.padding,
     this.placeholder,
     this.baseFontFamily,
+    this.barPosition = BarPosition.TOP,
     this.getImageUrl,
     this.getVideoUrl,
   }) : super(key: key);
@@ -89,10 +92,13 @@ class RichEditorState extends State<RichEditor> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        EditorToolBar(
-          controller: _controller,
-          getImageUrl: widget.getImageUrl,
-          javascriptExecutor: javascriptExecutor,
+        Visibility(
+          visible: widget.barPosition == BarPosition.TOP,
+          child: EditorToolBar(
+            controller: _controller,
+            getImageUrl: widget.getImageUrl,
+            javascriptExecutor: javascriptExecutor,
+          ),
         ),
         Expanded(
           child: WebView(
@@ -120,7 +126,15 @@ class RichEditorState extends State<RichEditor> {
               print("error ${e.description}");
             },
           ),
-        )
+        ),
+        Visibility(
+          visible: widget.barPosition == BarPosition.BOTTOM,
+          child: EditorToolBar(
+            controller: _controller,
+            getImageUrl: widget.getImageUrl,
+            javascriptExecutor: javascriptExecutor,
+          ),
+        ),
       ],
     );
   }
@@ -191,5 +205,15 @@ class RichEditorState extends State<RichEditor> {
   Future<bool> isEmpty() async {
     html = await javascriptExecutor.getCurrentHtml();
     return html == '<p>​</p>';
+  }
+
+  /// Enable Editing (If editing is disabled)
+  enableEditing() async {
+    await javascriptExecutor.setInputEnabled(true);
+  }
+
+  /// Disable Editing (Could be used for a 'view mode')
+  disableEditing() async {
+    await javascriptExecutor.setInputEnabled(false);
   }
 }

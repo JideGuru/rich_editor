@@ -55,113 +55,113 @@ class JavascriptExecutorBase {
 
   // Text commands
   undo() async {
-    await executeJavascript("undo()");
+    await executeJavascript("undo();");
   }
 
   redo() async {
-    await executeJavascript("redo()");
+    await executeJavascript("redo();");
   }
 
   setBold() async {
-    await executeJavascript("setBold()");
+    await executeJavascript("setBold();");
   }
 
   setItalic() async {
-    await executeJavascript("setItalic()");
+    await executeJavascript("setItalic();");
   }
 
   setUnderline() async {
-    await executeJavascript("setUnderline()");
+    await executeJavascript("setUnderline();");
   }
 
   setSubscript() async {
-    await executeJavascript("setSubscript()");
+    await executeJavascript("setSubscript();");
   }
 
   setSuperscript() async {
-    await executeJavascript("setSuperscript()");
+    await executeJavascript("setSuperscript();");
   }
 
   setStrikeThrough() async {
-    await executeJavascript("setStrikeThrough()");
+    await executeJavascript("setStrikeThrough();");
   }
 
   setTextColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setTextColor('$hex')");
+    await executeJavascript("setTextColor('$hex');");
   }
 
   setTextBackgroundColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setTextBackgroundColor('$hex')");
+    await executeJavascript("setTextBackgroundColor('$hex');");
   }
 
   setFontName(String fontName) async {
-    await executeJavascript("setFontName('$fontName')");
+    await executeJavascript("setFontName('$fontName');");
   }
 
   setFontSize(int fontSize) async {
     if (fontSize < 1 || fontSize > 7) {
       throw ("Font size should have a value between 1-7");
     }
-    await executeJavascript("setFontSize('$fontSize')");
+    await executeJavascript("setFontSize('$fontSize');");
   }
 
   setHeading(int heading) async {
-    await executeJavascript("setHeading('$heading')");
+    await executeJavascript("setHeading('$heading');");
   }
 
   setFormattingToParagraph() async {
-    await executeJavascript("setFormattingToParagraph()");
+    await executeJavascript("setFormattingToParagraph();");
   }
 
   setPreformat() async {
-    await executeJavascript("setPreformat()");
+    await executeJavascript("setPreformat();");
   }
 
   setBlockQuote() async {
-    await executeJavascript("setBlockQuote()");
+    await executeJavascript("setBlockQuote();");
   }
 
   removeFormat() async {
-    await executeJavascript("removeFormat()");
+    await executeJavascript("removeFormat();");
   }
 
   setJustifyLeft() async {
-    await executeJavascript("setJustifyLeft()");
+    await executeJavascript("setJustifyLeft();");
   }
 
   setJustifyCenter() async {
-    await executeJavascript("setJustifyCenter()");
+    await executeJavascript("setJustifyCenter();");
   }
 
   setJustifyRight() async {
-    await executeJavascript("setJustifyRight()");
+    await executeJavascript("setJustifyRight();");
   }
 
   setJustifyFull() async {
-    await executeJavascript("setJustifyFull()");
+    await executeJavascript("setJustifyFull();");
   }
 
   setIndent() async {
-    await executeJavascript("setIndent()");
+    await executeJavascript("setIndent();");
   }
 
   setOutdent() async {
-    await executeJavascript("setOutdent()");
+    await executeJavascript("setOutdent();");
   }
 
   insertBulletList() async {
-    await executeJavascript("insertBulletList()");
+    await executeJavascript("insertBulletList();");
   }
 
   insertNumberedList() async {
-    await executeJavascript("insertNumberedList()");
+    await executeJavascript("insertNumberedList();");
   }
 
   // Insert element
   insertLink(String url, String title) async {
-    await executeJavascript("insertLink('$url', '$title')");
+    await executeJavascript("insertLink('$url', '$title');");
   }
 
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
@@ -241,6 +241,10 @@ class JavascriptExecutorBase {
 
   setEditorHeight(int px) async {
     await executeJavascript("setHeight('" + px.toString() + "px');");
+  }
+
+  setInputEnabled(bool inputEnabled) async {
+    await executeJavascript("setInputEnabled($inputEnabled);");
   }
 
   static decodeHtml(String html) {

@@ -101,12 +101,16 @@ class _MyHomePageState extends State<MyHomePage> {
 // <h4>Heading 4</h4>
 // <h5>Heading 5</h5>
 // <h6>Heading 6</h6>
-//         ''',
+//         ''', // initial HTML data
         placeholder: 'Start typing',
-        // backgroundColor: Colors.blueGrey,
+        // backgroundColor: Colors.blueGrey, // Editor's bg color
         // baseTextColor: Colors.white,
+        // editor padding
         padding: EdgeInsets.symmetric(horizontal: 5.0),
+        // font name
         baseFontFamily: 'sans-serif',
+        // Position of the editing bar (BarPosition.TOP or BarPosition.BOTTOM)
+        barPosition: BarPosition.TOP,
         // You can return a Link (maybe you need to upload the image to your
         // storage before displaying in the editor or you can also use base64
         getImageUrl: (image) {
