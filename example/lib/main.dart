@@ -67,25 +67,17 @@ class _MyHomePageState extends State<MyHomePage> {
             onSelected: (val) async {
               switch (val) {
                 case 0:
-                  {
-                    String? html = await keyEditor.currentState?.getHtml();
-                    print(html);
-                  }
+                  String? html = await keyEditor.currentState?.getHtml();
+                  print(html);
                   break;
                 case 1:
-                  {
-                    await keyEditor.currentState?.clear();
-                  }
+                  await keyEditor.currentState?.clear();
                   break;
                 case 2:
-                  {
-                    await keyEditor.currentState?.unFocus();
-                  }
+                  await keyEditor.currentState?.unFocus();
                   break;
                 case 3:
-                  {
-                    await keyEditor.currentState?.focus();
-                  }
+                  await keyEditor.currentState?.focus();
                   break;
               }
             },
