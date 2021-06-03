@@ -34,15 +34,17 @@ Based on https://github.com/dankito/RichTextEditor, but for Flutter.
       RichEditor(
         key: keyEditor,
         value: 'initial html here',
-        placeholder: 'Start typing',
-        // backgroundColor: Colors.blueGrey, // Editor's bg color
-        // baseTextColor: Colors.white,
-        // editor padding
-        padding: EdgeInsets.symmetric(horizontal: 5.0),
-        // font name
-        baseFontFamily: 'sans-serif',
-        // Position of the editing bar (BarPosition.TOP or BarPosition.BOTTOM)
-        barPosition: BarPosition.TOP,
+        editorOptions: RichEditorOptions(
+          placeholder: 'Start typing',
+          // backgroundColor: Colors.blueGrey, // Editor's bg color
+          // baseTextColor: Colors.white,
+          // editor padding
+          padding: EdgeInsets.symmetric(horizontal: 5.0),
+          // font name
+          baseFontFamily: 'sans-serif',
+          // Position of the editing bar (BarPosition.TOP or BarPosition.BOTTOM)
+          barPosition: BarPosition.TOP,
+        ),
         // You can return a Link (maybe you need to upload the image to your
         // storage before displaying in the editor or you can also use base64
         getImageUrl: (image) {

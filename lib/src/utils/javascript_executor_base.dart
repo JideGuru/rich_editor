@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
 import 'package:rich_editor/src/models/editor_state.dart';
-import 'package:rich_editor/src/models/enum.dart';
+import 'package:rich_editor/src/models/enum/command_name.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/command_state.dart';

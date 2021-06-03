@@ -1,6 +1,5 @@
-import 'package:rich_editor/src/models/enum.dart';
-
 import 'command_state.dart';
+import 'enum/command_name.dart';
 
 class EditorState {
   bool? didHtmlChange;

@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:rich_editor/src/models/enum.dart';
+import 'package:rich_editor/src/models/enum/bar_position.dart';
+import 'package:rich_editor/src/models/rich_editor_options.dart';
 import 'package:rich_editor/src/services/local_server.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/editor_tool_bar.dart';
@@ -12,24 +13,14 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 class RichEditor extends StatefulWidget {
   final String? value;
-  final Color? backgroundColor;
-  final Color? baseTextColor;
-  final EdgeInsets? padding;
-  final String? placeholder;
-  final String? baseFontFamily;
-  final BarPosition barPosition;
+  final RichEditorOptions? editorOptions;
   final Function(File image)? getImageUrl;
   final Function(File video)? getVideoUrl;
 
   RichEditor({
     Key? key,
     this.value,
-    this.backgroundColor,
-    this.baseTextColor,
-    this.padding,
-    this.placeholder,
-    this.baseFontFamily,
-    this.barPosition = BarPosition.TOP,
+    this.editorOptions,
     this.getImageUrl,
     this.getVideoUrl,
   }) : super(key: key);
@@ -93,7 +84,7 @@ class RichEditorState extends State<RichEditor> {
     return Column(
       children: [
         Visibility(
-          visible: widget.barPosition == BarPosition.TOP,
+          visible: widget.editorOptions!.barPosition == BarPosition.TOP,
           child: EditorToolBar(
             controller: _controller,
             getImageUrl: widget.getImageUrl,
@@ -128,7 +119,7 @@ class RichEditorState extends State<RichEditor> {
           ),
         ),
         Visibility(
-          visible: widget.barPosition == BarPosition.BOTTOM,
+          visible: widget.editorOptions!.barPosition == BarPosition.BOTTOM,
           child: EditorToolBar(
             controller: _controller,
             getImageUrl: widget.getImageUrl,
@@ -141,16 +132,20 @@ class RichEditorState extends State<RichEditor> {
 
   _setInitialValues() async {
     if (widget.value != null) await javascriptExecutor.setHtml(widget.value!);
-    if (widget.padding != null)
-      await javascriptExecutor.setPadding(widget.padding!);
-    if (widget.backgroundColor != null)
-      await javascriptExecutor.setBackgroundColor(widget.backgroundColor!);
-    if (widget.baseTextColor != null)
-      await javascriptExecutor.setBaseTextColor(widget.baseTextColor!);
-    if (widget.placeholder != null)
-      await javascriptExecutor.setPlaceholder(widget.placeholder!);
-    if (widget.baseFontFamily != null)
-      await javascriptExecutor.setBaseFontFamily(widget.baseFontFamily!);
+    if (widget.editorOptions!.padding != null)
+      await javascriptExecutor.setPadding(widget.editorOptions!.padding!);
+    if (widget.editorOptions!.backgroundColor != null)
+      await javascriptExecutor
+          .setBackgroundColor(widget.editorOptions!.backgroundColor!);
+    if (widget.editorOptions!.baseTextColor != null)
+      await javascriptExecutor
+          .setBaseTextColor(widget.editorOptions!.baseTextColor!);
+    if (widget.editorOptions!.placeholder != null)
+      await javascriptExecutor
+          .setPlaceholder(widget.editorOptions!.placeholder!);
+    if (widget.editorOptions!.baseFontFamily != null)
+      await javascriptExecutor
+          .setBaseFontFamily(widget.editorOptions!.baseFontFamily!);
   }
 
   /// Get current HTML from editor

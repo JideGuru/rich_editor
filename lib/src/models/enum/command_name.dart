@@ -39,5 +39,3 @@ enum CommandName {
 // pseudo commands for toggling grouped command views
   EXPANDING_SEARCH_VIEWING,
 }
-
-enum BarPosition { TOP, BOTTOM }
