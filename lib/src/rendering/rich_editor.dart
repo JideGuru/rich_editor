@@ -4,12 +4,13 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:rich_editor/src/models/enum/bar_position.dart';
 import 'package:rich_editor/src/models/rich_editor_options.dart';
 import 'package:rich_editor/src/services/local_server.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/editor_tool_bar.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+// import 'package:webview_flutter/webview_flutter.dart';
 
 class RichEditor extends StatefulWidget {
   final String? value;
@@ -30,9 +31,11 @@ class RichEditor extends StatefulWidget {
 }
 
 class RichEditorState extends State<RichEditor> {
-  WebViewController? _controller;
+  InAppWebViewController? _controller;
   final Key _mapKey = UniqueKey();
   String assetPath = 'packages/rich_editor/assets/editor/editor.html';
+
+  // InAppWebViewController? webViewController;
 
   int port = 5321;
   String html = '';
@@ -42,8 +45,7 @@ class RichEditorState extends State<RichEditor> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
-    if (!Platform.isAndroid) {
+    if (Platform.isIOS) {
       _initServer();
     }
   }
@@ -76,7 +78,11 @@ class RichEditorState extends State<RichEditor> {
 
   _loadHtmlFromAssets() async {
     final filePath = assetPath;
-    _controller!.loadUrl("http://localhost:$port/$filePath");
+    _controller!.loadUrl(
+      urlRequest: URLRequest(
+        url: Uri.tryParse('http://localhost:$port/$filePath'),
+      ),
+    );
   }
 
   @override
@@ -86,42 +92,50 @@ class RichEditorState extends State<RichEditor> {
         Visibility(
           visible: widget.editorOptions!.barPosition == BarPosition.TOP,
           child: EditorToolBar(
-            controller: _controller,
             getImageUrl: widget.getImageUrl,
             javascriptExecutor: javascriptExecutor,
           ),
         ),
         Expanded(
-          child: WebView(
+          child: InAppWebView(
             key: _mapKey,
-            onWebViewCreated: (WebViewController controller) async {
+            onWebViewCreated: (controller) async {
               _controller = controller;
               setState(() {});
               if (!Platform.isAndroid) {
                 await _loadHtmlFromAssets();
               } else {
-                await _controller!
-                    .loadUrl('file:///android_asset/flutter_assets/$assetPath');
+                await _controller!.loadUrl(
+                  urlRequest: URLRequest(
+                    url: Uri.tryParse(
+                        'file:///android_asset/flutter_assets/$assetPath'),
+                  ),
+                );
               }
+            },
+            onLoadStop: (controller, link) async {
               javascriptExecutor.init(_controller!);
-            },
-            onPageFinished: (link) async {
               await _setInitialValues();
+              _addJSListener();
             },
-            javascriptMode: JavascriptMode.unrestricted,
-            gestureNavigationEnabled: true,
+            // javascriptMode: JavascriptMode.unrestricted,
+            // gestureNavigationEnabled: false,
             gestureRecognizers: [
               Factory(() => VerticalDragGestureRecognizer()..onUpdate = (_) {}),
             ].toSet(),
-            onWebResourceError: (e) {
-              print("error ${e.description}");
+            onLoadError: (controller, url, code, e) {
+              print("error $e $code");
+            },
+            onConsoleMessage: (controller, consoleMessage) async {
+              print(
+                'WebView Message: $consoleMessage',
+              );
             },
           ),
         ),
         Visibility(
           visible: widget.editorOptions!.barPosition == BarPosition.BOTTOM,
           child: EditorToolBar(
-            controller: _controller,
             getImageUrl: widget.getImageUrl,
             javascriptExecutor: javascriptExecutor,
           ),
@@ -148,6 +162,14 @@ class RichEditorState extends State<RichEditor> {
           .setBaseFontFamily(widget.editorOptions!.baseFontFamily!);
   }
 
+  _addJSListener() async {
+    _controller!.addJavaScriptHandler(
+        handlerName: 'editor-state-changed-callback://',
+        callback: (c) {
+          print('Callback $c');
+        });
+  }
+
   /// Get current HTML from editor
   Future<String?> getHtml() async {
     try {
@@ -170,7 +192,7 @@ class RichEditorState extends State<RichEditor> {
   /// Clear editor content using Javascript
   clear() {
     _controller!.evaluateJavascript(
-        'document.getElementById(\'editor\').innerHTML = "";');
+        source: 'document.getElementById(\'editor\').innerHTML = "";');
   }
 
   /// Focus and Show the keyboard using JavaScript
@@ -192,7 +214,7 @@ class RichEditorState extends State<RichEditor> {
         "    link.media = \"all\";" +
         "    head.appendChild(link);" +
         "}) ();";
-    _controller!.evaluateJavascript(jsCSSImport);
+    _controller!.evaluateJavascript(source: jsCSSImport);
   }
 
   /// if html is equal to html RichTextEditor sets by default at start

@@ -10,10 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  webview_flutter: ^2.0.4
+  flutter_inappwebview: ^5.3.2
   mime: ^1.0.0
   image_picker: ^0.7.5+3
-  flutter_html: ^2.0.0
+  flutter_widget_from_html_core: ^0.6.1+1
   flutter_colorpicker: ^0.4.0
   path: ^1.8.0
   xml2json: ^5.2.0

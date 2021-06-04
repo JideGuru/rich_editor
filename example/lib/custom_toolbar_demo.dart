@@ -62,29 +62,45 @@ class _CustomToolbarDemoState extends State<CustomToolbarDemo> {
           ),
         ],
       ),
-      body: RichEditor(
-        key: keyEditor,
+      body: Column(
+        children: [
+          Wrap(
+            children: [
+              IconButton(
+                icon: Icon(Icons.format_bold),
+                onPressed: () {
+                  keyEditor.currentState!.javascriptExecutor.setBold();
+                },
+              ),
+            ],
+          ),
+          Expanded(
+            child: RichEditor(
+              key: keyEditor,
 //         value: '', // initial HTML data
-        editorOptions: RichEditorOptions(
-          placeholder: 'Start typing',
-          // backgroundColor: Colors.blueGrey, // Editor's bg color
-          // baseTextColor: Colors.white,
-          // editor padding
-          padding: EdgeInsets.symmetric(horizontal: 5.0),
-          // font name
-          baseFontFamily: 'sans-serif',
-          // Position of the editing bar (BarPosition.TOP or BarPosition.BOTTOM)
-          barPosition: BarPosition.TOP,
-        ),
+              editorOptions: RichEditorOptions(
+                placeholder: 'Start typing',
+                // backgroundColor: Colors.blueGrey, // Editor's bg color
+                // baseTextColor: Colors.white,
+                // editor padding
+                padding: EdgeInsets.symmetric(horizontal: 5.0),
+                // font name
+                baseFontFamily: 'sans-serif',
+                // Position of the editing bar (BarPosition.TOP or BarPosition.BOTTOM)
+                barPosition: BarPosition.CUSTOM,
+              ),
 
-        // You can return a Link (maybe you need to upload the image to your
-        // storage before displaying in the editor or you can also use base64
-        getImageUrl: (image) {
-          String link = 'https://avatars.githubusercontent.com/u/24323581?v=4';
-          String base64 = base64Encode(image.readAsBytesSync());
-          String base64String = 'data:image/png;base64, $base64';
-          return base64String;
-        },
+              // You can return a Link (maybe you need to upload the image to your
+              // storage before displaying in the editor or you can also use base64
+              getImageUrl: (image) {
+                String link = 'https://avatars.githubusercontent.com/u/24323581?v=4';
+                String base64 = base64Encode(image.readAsBytesSync());
+                String base64String = 'data:image/png;base64, $base64';
+                return base64String;
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -73,6 +73,9 @@ Clear Editor content
 await keyEditor.currentState?.clear();
 ```
 
+### Custom Toolbar
+If you're interested in creating your own toolbar check the custom_toolbar_demo.dart in the example
+
 ## License
 
     Copyright 2021 JideGuru

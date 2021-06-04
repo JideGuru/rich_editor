@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
+
+import 'html_text.dart';
 
 class FontSizeDialog extends StatelessWidget {
   List formats = [
@@ -22,7 +23,7 @@ class FontSizeDialog extends StatelessWidget {
           children: [
             for (Map format in formats)
               InkWell(
-                child: Html(data: format['title']),
+                child: HtmlText(html: format['title']),
                 onTap: () => Navigator.pop(context, format['id']),
               )
           ],

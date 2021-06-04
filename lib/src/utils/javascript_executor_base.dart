@@ -1,16 +1,16 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
 import 'package:rich_editor/src/models/editor_state.dart';
 import 'package:rich_editor/src/models/enum/command_name.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/command_state.dart';
 
 /// A class that handles all editor-related javascript functions
 class JavascriptExecutorBase {
-  WebViewController? _controller;
+  InAppWebViewController? _controller;
 
   String defaultHtml = "<p>\u200B</p>";
 
@@ -22,12 +22,12 @@ class JavascriptExecutorBase {
   var didHtmlChange = false;
   Map<CommandName, CommandState> commandStates = {};
 
-  init(WebViewController controller) {
+  init(InAppWebViewController? controller) {
     _controller = controller;
   }
 
   executeJavascript(String command) async {
-    return await _controller!.evaluateJavascript('editor.$command');
+    return await _controller!.evaluateJavascript(source: 'editor.$command');
   }
 
   String getCachedHtml() {

@@ -7,20 +7,17 @@ import 'package:rich_editor/src/widgets/fonts_dialog.dart';
 import 'package:rich_editor/src/widgets/insert_image_dialog.dart';
 import 'package:rich_editor/src/widgets/insert_link_dialog.dart';
 import 'package:rich_editor/src/widgets/tab_button.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import 'color_picker_dialog.dart';
 import 'font_size_dialog.dart';
 import 'heading_dialog.dart';
 
 class EditorToolBar extends StatelessWidget {
-  final WebViewController? controller;
   final Function(File image)? getImageUrl;
   final Function(File video)? getVideoUrl;
   final JavascriptExecutorBase javascriptExecutor;
 
   EditorToolBar({
-    this.controller,
     this.getImageUrl,
     this.getVideoUrl,
     required this.javascriptExecutor,
