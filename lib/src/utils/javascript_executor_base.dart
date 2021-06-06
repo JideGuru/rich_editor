@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
+import 'package:rich_editor/src/models/callbacks/did_html_change_listener.dart';
+import 'package:rich_editor/src/models/callbacks/html_changed_listener.dart';
+import 'package:rich_editor/src/models/callbacks/loaded_listener.dart';
 import 'package:rich_editor/src/models/editor_state.dart';
 import 'package:rich_editor/src/models/enum/command_name.dart';
 
@@ -19,8 +22,26 @@ class JavascriptExecutorBase {
   String defaultEncoding = "UTF-8";
 
   String? htmlField = "";
+
   var didHtmlChange = false;
+
   Map<CommandName, CommandState> commandStates = {};
+
+  List<Map<CommandName, CommandState>> commandStatesChangedListeners =
+      <Map<CommandName, CommandState>>[];
+
+  List<DidHtmlChangeListener> didHtmlChangeListeners =
+      <DidHtmlChangeListener>[];
+
+  List<HtmlChangedListener> htmlChangedListeners = <HtmlChangedListener>[];
+
+  // protected val fireHtmlChangedListenersQueue = AsyncProducerConsumerQueue<String>(1) { html ->
+  // fireHtmlChangedListeners(html)
+  // }
+
+  bool isLoaded = false;
+
+  List<LoadedListener> loadedListeners = <LoadedListener>[];
 
   init(InAppWebViewController? controller) {
     _controller = controller;
@@ -42,8 +63,8 @@ class JavascriptExecutorBase {
 
   getCurrentHtml() async {
     String? html = await executeJavascript('getEncodedHtml()');
-    String? decodedHtml = Uri.decodeFull(html!);
-    if (decodedHtml.startsWith('"') && decodedHtml.endsWith('"')) {
+    String? decodedHtml = decodeHtml(html!);
+    if (decodedHtml!.startsWith('"') && decodedHtml.endsWith('"')) {
       decodedHtml = decodedHtml.substring(1, decodedHtml.length - 1);
     }
     return decodedHtml;
@@ -247,11 +268,11 @@ class JavascriptExecutorBase {
     await executeJavascript("setInputEnabled($inputEnabled);");
   }
 
-  static decodeHtml(String html) {
+  decodeHtml(String html) {
     return Uri.decodeFull(html);
   }
 
-  static encodeHtml(String html) {
+  encodeHtml(String html) {
     return Uri.encodeFull(html);
   }
 
@@ -295,9 +316,9 @@ class JavascriptExecutorBase {
       bool didHtmlChange, Map<CommandName, CommandState> commandStates) {
     if (this.didHtmlChange != didHtmlChange) {
       this.didHtmlChange = didHtmlChange;
-      // didHtmlChangeListeners.forEach {
-      //   it.didHtmlChange(didHtmlChange);
-      // }
+      didHtmlChangeListeners.forEach((element) {
+        element.didHtmlChange(didHtmlChange);
+      });
     }
 
     handleRetrievedCommandStates(commandStates);
@@ -307,37 +328,91 @@ class JavascriptExecutorBase {
     determineDerivedCommandStates(commandStates);
 
     this.commandStates = commandStates;
-
-    // commandStatesChangedListeners.forEach {
-    //   it.invoke(this.commandStates)
-    // }
+    commandStatesChangedListeners.forEach((element) {
+      element = this.commandStates;
+    });
   }
 
   determineDerivedCommandStates(Map<CommandName, CommandState> commandStates) {
-    // commandStates[CommandName.FORMATBLOCK]?.let {
-    //   formatCommandState
-    // ->
-    // commandStates.put(CommandName.H1, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h1")))
-    // commandStates.put(CommandName.H2, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h2")))
-    // commandStates.put(CommandName.H3, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h3")))
-    // commandStates.put(CommandName.H4, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h4")))
-    // commandStates.put(CommandName.H5, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h5")))
-    // commandStates.put(CommandName.H6, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h6")))
-    // commandStates.put(CommandName.P, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "p")))
-    // commandStates.put(CommandName.PRE, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "pre")))
-    // commandStates.put(CommandName.BR, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "")))
-    // commandStates.put(CommandName.BLOCKQUOTE, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "blockquote")))
-    // }
-    //
-    // commandStates[CommandName.INSERTHTML]?.let { insertHtmlState ->
-    // commandStates.put(CommandName.INSERTLINK, insertHtmlState)
-    // commandStates.put(CommandName.INSERTIMAGE, insertHtmlState)
-    // commandStates.put(CommandName.INSERTCHECKBOX, insertHtmlState)
-    // }
+    if (commandStates[CommandName.FORMATBLOCK] != null) {
+      var formatCommandState = commandStates[CommandName.FORMATBLOCK];
+      commandStates.update(
+        CommandName.H1,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h1")),
+      );
+      commandStates.update(
+          CommandName.H2,
+          (val) => CommandState(formatCommandState!.executable,
+              isFormatActivated(formatCommandState, "h2")));
+      commandStates.update(
+        CommandName.H3,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h3")),
+      );
+      commandStates.update(
+        CommandName.H4,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h4")),
+      );
+      commandStates.update(
+        CommandName.H5,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h5")),
+      );
+      commandStates.update(
+        CommandName.H6,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h6")),
+      );
+      commandStates.update(
+        CommandName.P,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "p")),
+      );
+      commandStates.update(
+        CommandName.PRE,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "pre")),
+      );
+      commandStates.update(
+        CommandName.BR,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "")),
+      );
+      commandStates.update(
+        CommandName.BLOCKQUOTE,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "blockquote")),
+      );
+    }
+
+    if (commandStates[CommandName.INSERTHTML] != null) {
+      CommandState? insertHtmlState = commandStates[CommandName.INSERTHTML];
+      commandStates.update(CommandName.INSERTLINK, (val) => insertHtmlState!);
+      commandStates.update(CommandName.INSERTIMAGE, (val) => insertHtmlState!);
+      commandStates.update(
+          CommandName.INSERTCHECKBOX, (val) => insertHtmlState!);
+    }
   }
 
   String isFormatActivated(CommandState formatCommandState, String format) {
     return (formatCommandState.value == format)
         .toString(); // rich_text_editor.js reports boolean values as string, so we also have to convert it to string
+  }
+
+  addCommandStatesChangedListener(
+      Map<CommandName, CommandState> commandStates) {
+    commandStatesChangedListeners.add(commandStates);
+
+    // listener.invoke(commandStates);
+  }
+
+  addDidHtmlChangeListener(DidHtmlChangeListener listener) {
+    didHtmlChangeListeners.add(listener);
+  }
+
+  addHtmlChangedListener(HtmlChangedListener listener) {
+    htmlChangedListeners.add(listener);
   }
 }

@@ -16,11 +16,13 @@ class EditorToolBar extends StatelessWidget {
   final Function(File image)? getImageUrl;
   final Function(File video)? getVideoUrl;
   final JavascriptExecutorBase javascriptExecutor;
+  final bool? enableVideo;
 
   EditorToolBar({
     this.getImageUrl,
     this.getVideoUrl,
     required this.javascriptExecutor,
+    this.enableVideo,
   });
 
   @override
@@ -84,6 +86,14 @@ class EditorToolBar extends StatelessWidget {
                       );
                     }
                   },
+                ),
+                Visibility(
+                  visible: false,
+                  child: TabButton(
+                    tooltip: 'Insert video',
+                    icon: Icons.video_call_sharp,
+                    onTap: () async {},
+                  ),
                 ),
                 TabButton(
                   tooltip: 'Underline',

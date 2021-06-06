@@ -10,7 +10,6 @@ import 'package:rich_editor/src/models/rich_editor_options.dart';
 import 'package:rich_editor/src/services/local_server.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/editor_tool_bar.dart';
-// import 'package:webview_flutter/webview_flutter.dart';
 
 class RichEditor extends StatefulWidget {
   final String? value;
@@ -34,8 +33,6 @@ class RichEditorState extends State<RichEditor> {
   InAppWebViewController? _controller;
   final Key _mapKey = UniqueKey();
   String assetPath = 'packages/rich_editor/assets/editor/editor.html';
-
-  // InAppWebViewController? webViewController;
 
   int port = 5321;
   String html = '';
@@ -94,6 +91,7 @@ class RichEditorState extends State<RichEditor> {
           child: EditorToolBar(
             getImageUrl: widget.getImageUrl,
             javascriptExecutor: javascriptExecutor,
+            enableVideo: widget.editorOptions!.enableVideo,
           ),
         ),
         Expanded(
@@ -114,9 +112,11 @@ class RichEditorState extends State<RichEditor> {
               }
             },
             onLoadStop: (controller, link) async {
-              javascriptExecutor.init(_controller!);
-              await _setInitialValues();
-              _addJSListener();
+              if (link!.path != 'blank') {
+                javascriptExecutor.init(_controller!);
+                await _setInitialValues();
+                _addJSListener();
+              }
             },
             // javascriptMode: JavascriptMode.unrestricted,
             // gestureNavigationEnabled: false,
@@ -138,6 +138,7 @@ class RichEditorState extends State<RichEditor> {
           child: EditorToolBar(
             getImageUrl: widget.getImageUrl,
             javascriptExecutor: javascriptExecutor,
+            enableVideo: widget.editorOptions!.enableVideo,
           ),
         ),
       ],
