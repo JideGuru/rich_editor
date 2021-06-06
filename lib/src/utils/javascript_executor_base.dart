@@ -198,6 +198,23 @@ class JavascriptExecutorBase {
     );
   }
 
+  insertVideo(String url,
+      {int? width, int? height, bool fromDevice = true}) async {
+    bool? local;
+    local = fromDevice ? true : null;
+    if (width == null) width = 300;
+    if (height == null) height = 220;
+    // check if link is yt link
+    if (url.contains('youtu')) {
+      // Get Video id from link.
+      String youtubeId = url.split(r'?v=')[1];
+      url = 'https://www.youtube.com/embed/$youtubeId';
+    }
+    await executeJavascript(
+      "insertVideo('$url', '$width', '$height', $local);",
+    );
+  }
+
   insertCheckbox(String text) async {
     await executeJavascript("insertCheckbox('$text');");
   }

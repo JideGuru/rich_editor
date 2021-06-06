@@ -474,6 +474,25 @@ var editor = {
             }
     },
 
+    insertVideo: function(url, width, height, fromDevice) {
+    console.log(url);
+        if (fromDevice) {
+            this._insertVideo(url, width, height);
+        } else {
+            this._insertYoutubeVideo(url, width, height);
+        }
+    },
+    
+    _insertYoutubeVideo: function(url, width, height) {
+        var html = '<iframe width="'+ width +'" height="'+ height +'" src="' + url + '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>';
+        this._insertHtml(html);
+    },
+
+    _insertVideo: function(url, width, height) {
+        var html = '<video width="'+ width +'" height="'+ height +'" controls><source type="video/mp4" src="'+ url +'"></video>'
+        this._insertHtml(html);
+    },
+
     insertCheckbox: function(text) {
         var editor = this;
 

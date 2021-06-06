@@ -88,11 +88,7 @@ class RichEditorState extends State<RichEditor> {
       children: [
         Visibility(
           visible: widget.editorOptions!.barPosition == BarPosition.TOP,
-          child: EditorToolBar(
-            getImageUrl: widget.getImageUrl,
-            javascriptExecutor: javascriptExecutor,
-            enableVideo: widget.editorOptions!.enableVideo,
-          ),
+          child: _buildToolBar(),
         ),
         Expanded(
           child: InAppWebView(
@@ -135,13 +131,18 @@ class RichEditorState extends State<RichEditor> {
         ),
         Visibility(
           visible: widget.editorOptions!.barPosition == BarPosition.BOTTOM,
-          child: EditorToolBar(
-            getImageUrl: widget.getImageUrl,
-            javascriptExecutor: javascriptExecutor,
-            enableVideo: widget.editorOptions!.enableVideo,
-          ),
+          child: _buildToolBar(),
         ),
       ],
+    );
+  }
+
+  _buildToolBar() {
+    return EditorToolBar(
+      getImageUrl: widget.getImageUrl,
+      getVideoUrl: widget.getVideoUrl,
+      javascriptExecutor: javascriptExecutor,
+      enableVideo: widget.editorOptions!.enableVideo,
     );
   }
 

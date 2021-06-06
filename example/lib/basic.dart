@@ -88,6 +88,11 @@ class BasicDemo extends StatelessWidget {
           String base64String = 'data:image/png;base64, $base64';
           return base64String;
         },
+        getVideoUrl: (video) {
+          String link = 'https://file-examples-com.github.io/uploads/2017/'
+              '04/file_example_MP4_480_1_5MG.mp4';
+          return link;
+        },
       ),
     );
   }

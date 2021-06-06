@@ -71,7 +71,6 @@ class EditorToolBar extends StatelessWidget {
                   onTap: () async {
                     var link = await showDialog(
                       context: context,
-                      barrierDismissible: false,
                       builder: (_) {
                         return InsertImageDialog();
                       },
@@ -88,11 +87,27 @@ class EditorToolBar extends StatelessWidget {
                   },
                 ),
                 Visibility(
-                  visible: false,
+                  visible: enableVideo!,
                   child: TabButton(
                     tooltip: 'Insert video',
                     icon: Icons.video_call_sharp,
-                    onTap: () async {},
+                    onTap: () async {
+                      var link = await showDialog(
+                        context: context,
+                        builder: (_) {
+                          return InsertImageDialog(isVideo: true);
+                        },
+                      );
+                      if(link != null) {
+                        if (getVideoUrl != null && link[2]) {
+                          link[0] = await getVideoUrl!(File(link[0]));
+                        }
+                        await javascriptExecutor.insertVideo(
+                          link[0],
+                          fromDevice: link[2],
+                        );
+                      }
+                    },
                   ),
                 ),
                 TabButton(
