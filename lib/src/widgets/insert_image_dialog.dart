@@ -4,6 +4,10 @@ import 'package:image_picker/image_picker.dart';
 import 'custom_dialog_template.dart';
 
 class InsertImageDialog extends StatefulWidget {
+  final bool isVideo;
+
+  InsertImageDialog({this.isVideo = false});
+
   @override
   _InsertImageDialogState createState() => _InsertImageDialogState();
 }
@@ -21,7 +25,7 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Image link'),
+            Text(widget.isVideo ? 'Video link' : 'Image link'),
             ElevatedButton(
               onPressed: () => getImage(),
               child: Text('...'),
@@ -34,12 +38,21 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
             hintText: '',
           ),
         ),
-        SizedBox(height: 20.0),
-        Text('Alt text (optional)'),
-        TextField(
-          controller: alt,
-          decoration: InputDecoration(
-            hintText: '',
+        Visibility(
+          visible: !widget.isVideo,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 20.0),
+              Text('Alt text (optional)'),
+              TextField(
+                controller: alt,
+                decoration: InputDecoration(
+                  hintText: '',
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -50,11 +63,16 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
 
   Future getImage() async {
     final picker = ImagePicker();
-    var image = await picker.getImage(
-      source: ImageSource.gallery,
-      maxWidth: 800.0,
-      maxHeight: 600.0,
-    );
+    var image;
+    if (widget.isVideo) {
+      image = await picker.getVideo(source: ImageSource.gallery);
+    } else {
+      image = await picker.getImage(
+        source: ImageSource.gallery,
+        maxWidth: 800.0,
+        maxHeight: 600.0,
+      );
+    }
 
     if (image != null) {
       link.text = image.path;

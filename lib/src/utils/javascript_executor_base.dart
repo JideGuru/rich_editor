@@ -1,15 +1,19 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
+import 'package:rich_editor/src/models/callbacks/did_html_change_listener.dart';
+import 'package:rich_editor/src/models/callbacks/html_changed_listener.dart';
+import 'package:rich_editor/src/models/callbacks/loaded_listener.dart';
 import 'package:rich_editor/src/models/editor_state.dart';
-import 'package:rich_editor/src/models/enum.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:rich_editor/src/models/enum/command_name.dart';
 
 import '../models/command_state.dart';
 
+/// A class that handles all editor-related javascript functions
 class JavascriptExecutorBase {
-  WebViewController? _controller;
+  InAppWebViewController? _controller;
 
   String defaultHtml = "<p>\u200B</p>";
 
@@ -18,15 +22,33 @@ class JavascriptExecutorBase {
   String defaultEncoding = "UTF-8";
 
   String? htmlField = "";
+
   var didHtmlChange = false;
+
   Map<CommandName, CommandState> commandStates = {};
 
-  init(WebViewController controller) {
+  List<Map<CommandName, CommandState>> commandStatesChangedListeners =
+      <Map<CommandName, CommandState>>[];
+
+  List<DidHtmlChangeListener> didHtmlChangeListeners =
+      <DidHtmlChangeListener>[];
+
+  List<HtmlChangedListener> htmlChangedListeners = <HtmlChangedListener>[];
+
+  // protected val fireHtmlChangedListenersQueue = AsyncProducerConsumerQueue<String>(1) { html ->
+  // fireHtmlChangedListeners(html)
+  // }
+
+  bool isLoaded = false;
+
+  List<LoadedListener> loadedListeners = <LoadedListener>[];
+
+  init(InAppWebViewController? controller) {
     _controller = controller;
   }
 
   executeJavascript(String command) async {
-    return await _controller!.evaluateJavascript('editor.$command');
+    return await _controller!.evaluateJavascript(source: 'editor.$command');
   }
 
   String getCachedHtml() {
@@ -41,8 +63,8 @@ class JavascriptExecutorBase {
 
   getCurrentHtml() async {
     String? html = await executeJavascript('getEncodedHtml()');
-    String? decodedHtml = Uri.decodeFull(html!);
-    if (decodedHtml.startsWith('"') && decodedHtml.endsWith('"')) {
+    String? decodedHtml = decodeHtml(html!);
+    if (decodedHtml!.startsWith('"') && decodedHtml.endsWith('"')) {
       decodedHtml = decodedHtml.substring(1, decodedHtml.length - 1);
     }
     return decodedHtml;
@@ -54,113 +76,113 @@ class JavascriptExecutorBase {
 
   // Text commands
   undo() async {
-    await executeJavascript("undo()");
+    await executeJavascript("undo();");
   }
 
   redo() async {
-    await executeJavascript("redo()");
+    await executeJavascript("redo();");
   }
 
   setBold() async {
-    await executeJavascript("setBold()");
+    await executeJavascript("setBold();");
   }
 
   setItalic() async {
-    await executeJavascript("setItalic()");
+    await executeJavascript("setItalic();");
   }
 
   setUnderline() async {
-    await executeJavascript("setUnderline()");
+    await executeJavascript("setUnderline();");
   }
 
   setSubscript() async {
-    await executeJavascript("setSubscript()");
+    await executeJavascript("setSubscript();");
   }
 
   setSuperscript() async {
-    await executeJavascript("setSuperscript()");
+    await executeJavascript("setSuperscript();");
   }
 
   setStrikeThrough() async {
-    await executeJavascript("setStrikeThrough()");
+    await executeJavascript("setStrikeThrough();");
   }
 
   setTextColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setTextColor('$hex')");
+    await executeJavascript("setTextColor('$hex');");
   }
 
   setTextBackgroundColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setTextBackgroundColor('$hex')");
+    await executeJavascript("setTextBackgroundColor('$hex');");
   }
 
   setFontName(String fontName) async {
-    await executeJavascript("setFontName('$fontName')");
+    await executeJavascript("setFontName('$fontName');");
   }
 
   setFontSize(int fontSize) async {
     if (fontSize < 1 || fontSize > 7) {
       throw ("Font size should have a value between 1-7");
     }
-    await executeJavascript("setFontSize('$fontSize')");
+    await executeJavascript("setFontSize('$fontSize');");
   }
 
   setHeading(int heading) async {
-    await executeJavascript("setHeading('$heading')");
+    await executeJavascript("setHeading('$heading');");
   }
 
   setFormattingToParagraph() async {
-    await executeJavascript("setFormattingToParagraph()");
+    await executeJavascript("setFormattingToParagraph();");
   }
 
   setPreformat() async {
-    await executeJavascript("setPreformat()");
+    await executeJavascript("setPreformat();");
   }
 
   setBlockQuote() async {
-    await executeJavascript("setBlockQuote()");
+    await executeJavascript("setBlockQuote();");
   }
 
   removeFormat() async {
-    await executeJavascript("removeFormat()");
+    await executeJavascript("removeFormat();");
   }
 
   setJustifyLeft() async {
-    await executeJavascript("setJustifyLeft()");
+    await executeJavascript("setJustifyLeft();");
   }
 
   setJustifyCenter() async {
-    await executeJavascript("setJustifyCenter()");
+    await executeJavascript("setJustifyCenter();");
   }
 
   setJustifyRight() async {
-    await executeJavascript("setJustifyRight()");
+    await executeJavascript("setJustifyRight();");
   }
 
   setJustifyFull() async {
-    await executeJavascript("setJustifyFull()");
+    await executeJavascript("setJustifyFull();");
   }
 
   setIndent() async {
-    await executeJavascript("setIndent()");
+    await executeJavascript("setIndent();");
   }
 
   setOutdent() async {
-    await executeJavascript("setOutdent()");
+    await executeJavascript("setOutdent();");
   }
 
   insertBulletList() async {
-    await executeJavascript("insertBulletList()");
+    await executeJavascript("insertBulletList();");
   }
 
   insertNumberedList() async {
-    await executeJavascript("insertNumberedList()");
+    await executeJavascript("insertNumberedList();");
   }
 
   // Insert element
   insertLink(String url, String title) async {
-    await executeJavascript("insertLink('$url', '$title')");
+    await executeJavascript("insertLink('$url', '$title');");
   }
 
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
@@ -172,116 +194,244 @@ class JavascriptExecutorBase {
     if (height == null) height = 300;
     if (alt == null) alt = '';
     await executeJavascript(
-      "insertImage('$url', '$alt', '$width', '$height', $rotation)",
+      "insertImage('$url', '$alt', '$width', '$height', $rotation);",
+    );
+  }
+
+  /// Insert video from Youtube or Device
+  /// might work with dailymotion but i've not tested that
+  insertVideo(String url,
+      {int? width, int? height, bool fromDevice = true}) async {
+    bool? local;
+    local = fromDevice ? true : null;
+    if (width == null) width = 300;
+    if (height == null) height = 220;
+    // check if link is yt link
+    if (url.contains('youtu')) {
+      // Get Video id from link.
+      String youtubeId = url.split(r'?v=')[1];
+      url = 'https://www.youtube.com/embed/$youtubeId';
+    }
+    await executeJavascript(
+      "insertVideo('$url', '$width', '$height', $local);",
     );
   }
 
   insertCheckbox(String text) async {
-    await executeJavascript("insertCheckbox('$text')");
+    await executeJavascript("insertCheckbox('$text');");
   }
 
   insertHtml(String html) async {
     String? encodedHtml = encodeHtml(html);
-    await executeJavascript("insertHtml('$encodedHtml')");
+    await executeJavascript("insertHtml('$encodedHtml');");
   }
 
   makeImagesResizeable() async {
-    await executeJavascript("makeImagesResizeable()");
+    await executeJavascript("makeImagesResizeable();");
   }
 
   disableImageResizing() async {
-    await executeJavascript("disableImageResizing()");
+    await executeJavascript("disableImageResizing();");
   }
 
-  static decodeHtml(String html) {
+  // Editor settings commands
+  focus() async {
+    await executeJavascript("focus();");
+  }
+
+  unFocus() async {
+    await executeJavascript("blurFocus();");
+  }
+
+  setBackgroundColor(Color? color) async {
+    String? hex = color!.toHexColorString();
+    await executeJavascript("setBackgroundColor('$hex');");
+  }
+
+  setBackgroundImage(String image) async {
+    await executeJavascript("setBackgroundImage('$image');");
+  }
+
+  setBaseTextColor(Color? color) async {
+    String? hex = color!.toHexColorString();
+    await executeJavascript("setBaseTextColor('$hex');");
+  }
+
+  setBaseFontFamily(String fontFamily) async {
+    await executeJavascript("setBaseFontFamily('$fontFamily');");
+  }
+
+  setPadding(EdgeInsets? padding) async {
+    String left = padding!.left.toString();
+    String top = padding.top.toString();
+    String right = padding.right.toString();
+    String bottom = padding.bottom.toString();
+    await executeJavascript(
+        "setPadding('${left}px', '${top}px', '${right}px', '${bottom}px');");
+  }
+
+  // Doesnt actually work for' now
+  setPlaceholder(String placeholder) async {
+    await executeJavascript("setPlaceholder('$placeholder');");
+  }
+
+  setEditorWidth(int px) async {
+    await executeJavascript("setWidth('" + px.toString() + "px');");
+  }
+
+  setEditorHeight(int px) async {
+    await executeJavascript("setHeight('" + px.toString() + "px');");
+  }
+
+  setInputEnabled(bool inputEnabled) async {
+    await executeJavascript("setInputEnabled($inputEnabled);");
+  }
+
+  decodeHtml(String html) {
     return Uri.decodeFull(html);
   }
 
-  static encodeHtml(String html) {
+  encodeHtml(String html) {
     return Uri.encodeFull(html);
   }
 
-  // bool shouldOverrideUrlLoading(String url) {
-  //   String decodedUrl;
-  //   try {
-  //     decodedUrl = decodeHtml(url);
-  //   } catch (e) {
-  //     // No handling
-  //     return false;
-  //   }
-  //
-  //   if (url.indexOf(editorStateChangedCallbackScheme) == 0) {
-  //     editorStateChanged(
-  //         decodedUrl.substring(editorStateChangedCallbackScheme.length));
-  //     return true;
-  //   }
-  //
-  //   return false;
-  // }
-  //
-  // editorStateChanged(String statesString) {
-  //   try {
-  //     var editorState = EditorState.fromJson(jsonDecode(statesString));
-  //
-  //     bool currentHtmlChanged = this.htmlField != editorState.html;
-  //     this.htmlField = editorState.html;
-  //
-  //     retrievedEditorState(editorState.didHtmlChange, editorState.commandStates)
-  //
-  //     if (currentHtmlChanged) {
-  //       fireHtmlChangedListenersAsync(editorState.html);
-  //     }
-  //   }
-  //   catch (e) {
-  //     throw("Could not parse command states: $statesString $e");
-  //   }
-  // }
-  //
-  // retrievedEditorState(bool didHtmlChange,
-  //     Map<CommandName, CommandState> commandStates) {
-  //   if (this.didHtmlChange != didHtmlChange) {
-  //     this.didHtmlChange = didHtmlChange;
-  //     didHtmlChangeListeners.forEach {
-  //       it.didHtmlChange(didHtmlChange);
-  //     }
-  //   }
-  //
-  //   handleRetrievedCommandStates(commandStates)
-  // }
-  //
-  // handleRetrievedCommandStates(Map<CommandName, CommandState> commandStates) {
-  //   determineDerivedCommandStates(commandStates)
-  //
-  //   this.commandStates = commandStates;
-  //
-  //   commandStatesChangedListeners.forEach {
-  //     it.invoke(this.commandStates)
-  //   }
-  // }
+  bool shouldOverrideUrlLoading(String url) {
+    String decodedUrl;
+    try {
+      decodedUrl = decodeHtml(url);
+    } catch (e) {
+      // No handling
+      return false;
+    }
 
-  // determineDerivedCommandStates(Map<CommandName, CommandState> commandStates) {
-  // commandStates[CommandName.FORMATBLOCK]?.let { formatCommandState ->
-  // commandStates.put(CommandName.H1, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h1")))
-  // commandStates.put(CommandName.H2, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h2")))
-  // commandStates.put(CommandName.H3, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h3")))
-  // commandStates.put(CommandName.H4, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h4")))
-  // commandStates.put(CommandName.H5, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h5")))
-  // commandStates.put(CommandName.H6, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "h6")))
-  // commandStates.put(CommandName.P, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "p")))
-  // commandStates.put(CommandName.PRE, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "pre")))
-  // commandStates.put(CommandName.BR, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "")))
-  // commandStates.put(CommandName.BLOCKQUOTE, CommandState(formatCommandState.executable, isFormatActivated(formatCommandState, "blockquote")))
-  // }
-  //
-  // commandStates[CommandName.INSERTHTML]?.let { insertHtmlState ->
-  // commandStates.put(CommandName.INSERTLINK, insertHtmlState)
-  // commandStates.put(CommandName.INSERTIMAGE, insertHtmlState)
-  // commandStates.put(CommandName.INSERTCHECKBOX, insertHtmlState)
-  // }
-  // }
+    if (url.indexOf(editorStateChangedCallbackScheme) == 0) {
+      editorStateChanged(
+          decodedUrl.substring(editorStateChangedCallbackScheme.length));
+      return true;
+    }
 
-  // String isFormatActivated(CommandState formatCommandState, String format) {
-  //   return (formatCommandState.value == format)
-  //       .toString(); // rich_text_editor.js reports boolean values as string, so we also have to convert it to string
-  // }
+    return false;
+  }
+
+  editorStateChanged(String statesString) {
+    try {
+      var editorState = EditorState.fromJson(jsonDecode(statesString));
+
+      bool currentHtmlChanged = this.htmlField != editorState.html;
+      this.htmlField = editorState.html;
+
+      retrievedEditorState(
+          editorState.didHtmlChange!, editorState.commandStates!);
+
+      if (currentHtmlChanged) {
+        // fireHtmlChangedListenersAsync(editorState.html);
+      }
+    } catch (e) {
+      throw ("Could not parse command states: $statesString $e");
+    }
+  }
+
+  retrievedEditorState(
+      bool didHtmlChange, Map<CommandName, CommandState> commandStates) {
+    if (this.didHtmlChange != didHtmlChange) {
+      this.didHtmlChange = didHtmlChange;
+      didHtmlChangeListeners.forEach((element) {
+        element.didHtmlChange(didHtmlChange);
+      });
+    }
+
+    handleRetrievedCommandStates(commandStates);
+  }
+
+  handleRetrievedCommandStates(Map<CommandName, CommandState> commandStates) {
+    determineDerivedCommandStates(commandStates);
+
+    this.commandStates = commandStates;
+    commandStatesChangedListeners.forEach((element) {
+      element = this.commandStates;
+    });
+  }
+
+  determineDerivedCommandStates(Map<CommandName, CommandState> commandStates) {
+    if (commandStates[CommandName.FORMATBLOCK] != null) {
+      var formatCommandState = commandStates[CommandName.FORMATBLOCK];
+      commandStates.update(
+        CommandName.H1,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h1")),
+      );
+      commandStates.update(
+          CommandName.H2,
+          (val) => CommandState(formatCommandState!.executable,
+              isFormatActivated(formatCommandState, "h2")));
+      commandStates.update(
+        CommandName.H3,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h3")),
+      );
+      commandStates.update(
+        CommandName.H4,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h4")),
+      );
+      commandStates.update(
+        CommandName.H5,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h5")),
+      );
+      commandStates.update(
+        CommandName.H6,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "h6")),
+      );
+      commandStates.update(
+        CommandName.P,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "p")),
+      );
+      commandStates.update(
+        CommandName.PRE,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "pre")),
+      );
+      commandStates.update(
+        CommandName.BR,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "")),
+      );
+      commandStates.update(
+        CommandName.BLOCKQUOTE,
+        (val) => CommandState(formatCommandState!.executable,
+            isFormatActivated(formatCommandState, "blockquote")),
+      );
+    }
+
+    if (commandStates[CommandName.INSERTHTML] != null) {
+      CommandState? insertHtmlState = commandStates[CommandName.INSERTHTML];
+      commandStates.update(CommandName.INSERTLINK, (val) => insertHtmlState!);
+      commandStates.update(CommandName.INSERTIMAGE, (val) => insertHtmlState!);
+      commandStates.update(
+          CommandName.INSERTCHECKBOX, (val) => insertHtmlState!);
+    }
+  }
+
+  String isFormatActivated(CommandState formatCommandState, String format) {
+    return (formatCommandState.value == format)
+        .toString(); // rich_text_editor.js reports boolean values as string, so we also have to convert it to string
+  }
+
+  addCommandStatesChangedListener(
+      Map<CommandName, CommandState> commandStates) {
+    commandStatesChangedListeners.add(commandStates);
+
+    // listener.invoke(commandStates);
+  }
+
+  addDidHtmlChangeListener(DidHtmlChangeListener listener) {
+    didHtmlChangeListeners.add(listener);
+  }
+
+  addHtmlChangedListener(HtmlChangedListener listener) {
+    htmlChangedListeners.add(listener);
+  }
 }

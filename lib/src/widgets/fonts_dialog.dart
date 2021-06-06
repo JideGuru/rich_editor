@@ -1,10 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
 import 'package:path/path.dart';
 import 'package:rich_editor/src/models/system_font.dart';
 import 'package:rich_editor/src/utils/font_list_parser.dart';
+
+import 'html_text.dart';
 
 class FontsDialog extends StatelessWidget {
   List<SystemFont> getSystemFonts() {
@@ -21,21 +20,16 @@ class FontsDialog extends StatelessWidget {
           children: [
             for (SystemFont font in getSystemFonts())
               InkWell(
-                child: Html(data: '<p style="font-family:${font.name}">'
-                    '${basename(font.path!)}</p>'),
-                onTap: () => Navigator.pop(context, font.path),
+                child: HtmlText(
+                    html: '<p style="font-family:${font.name}">'
+                        '${basename(font.path!)}</p>'),
+                onTap: () {
+                  Navigator.pop(context, font.name);
+                },
               )
           ],
         ),
       ),
     );
-  }
-
-  fontSlug(FileSystemEntity font) {
-    String name = basename(font.path);
-    String slug = name.toLowerCase();
-    slug = slug.replaceAll(extension(font.path), '');
-    // print(slug);
-    return slug;
   }
 }
