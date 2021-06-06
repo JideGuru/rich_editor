@@ -8,6 +8,9 @@ class HtmlText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(child: HtmlWidget(html), height: 40.0,);
+    return Container(
+      child: HtmlWidget(html),
+      height: 40.0,
+    );
   }
 }

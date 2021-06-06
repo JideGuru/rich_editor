@@ -198,6 +198,8 @@ class JavascriptExecutorBase {
     );
   }
 
+  /// Insert video from Youtube or Device
+  /// might work with dailymotion but i've not tested that
   insertVideo(String url,
       {int? width, int? height, bool fromDevice = true}) async {
     bool? local;

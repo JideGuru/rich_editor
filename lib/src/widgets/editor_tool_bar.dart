@@ -98,7 +98,7 @@ class EditorToolBar extends StatelessWidget {
                           return InsertImageDialog(isVideo: true);
                         },
                       );
-                      if(link != null) {
+                      if (link != null) {
                         if (getVideoUrl != null && link[2]) {
                           link[0] = await getVideoUrl!(File(link[0]));
                         }
