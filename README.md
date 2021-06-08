@@ -30,7 +30,6 @@ Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 ## 📸 Screenshots
 
 <img src="https://github.com/JideGuru/rich_editor/raw/master/res/1.png" width="400">
-<img src="https://github.com/JideGuru/rich_editor/raw/master/res/2.png" width="400">
 
 ## Usage
 
