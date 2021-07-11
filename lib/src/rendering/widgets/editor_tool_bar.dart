@@ -1,12 +1,13 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
-import 'package:rich_editor/src/widgets/check_dialog.dart';
-import 'package:rich_editor/src/widgets/fonts_dialog.dart';
-import 'package:rich_editor/src/widgets/insert_image_dialog.dart';
-import 'package:rich_editor/src/widgets/insert_link_dialog.dart';
-import 'package:rich_editor/src/widgets/tab_button.dart';
+import 'package:rich_editor/src/rendering/widgets/check_dialog.dart';
+import 'package:rich_editor/src/rendering/widgets/fonts_dialog.dart';
+import 'package:rich_editor/src/rendering/widgets/insert_image_dialog.dart';
+import 'package:rich_editor/src/rendering/widgets/insert_link_dialog.dart';
+import 'package:rich_editor/src/rendering/widgets/tab_button.dart';
 
 import 'color_picker_dialog.dart';
 import 'font_size_dialog.dart';
@@ -192,24 +193,25 @@ class EditorToolBar extends StatelessWidget {
                   },
                 ),
                 // TODO: Show font button on iOS
-                Visibility(
-                  visible: Platform.isAndroid,
-                  child: TabButton(
-                    tooltip: 'Font face',
-                    icon: Icons.font_download,
-                    onTap: () async {
-                      var command = await showDialog(
-                        // isScrollControlled: true,
-                        context: context,
-                        builder: (_) {
-                          return FontsDialog();
-                        },
-                      );
-                      if (command != null)
-                        await javascriptExecutor.setFontName(command);
-                    },
+                if(!kIsWeb)
+                  Visibility(
+                    visible: Platform.isAndroid,
+                    child: TabButton(
+                      tooltip: 'Font face',
+                      icon: Icons.font_download,
+                      onTap: () async {
+                        var command = await showDialog(
+                          // isScrollControlled: true,
+                          context: context,
+                          builder: (_) {
+                            return FontsDialog();
+                          },
+                        );
+                        if (command != null)
+                          await javascriptExecutor.setFontName(command);
+                      },
+                    ),
                   ),
-                ),
                 TabButton(
                   icon: Icons.format_size,
                   tooltip: 'Font Size',
