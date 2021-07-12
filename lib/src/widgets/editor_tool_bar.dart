@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/check_dialog.dart';
@@ -193,7 +194,7 @@ class EditorToolBar extends StatelessWidget {
                 ),
                 // TODO: Show font button on iOS
                 Visibility(
-                  visible: Platform.isAndroid,
+                  visible: (!kIsWeb && Platform.isAndroid),
                   child: TabButton(
                     tooltip: 'Font face',
                     icon: Icons.font_download,
