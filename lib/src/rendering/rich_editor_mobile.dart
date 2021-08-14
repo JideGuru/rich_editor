@@ -42,7 +42,7 @@ class RichEditorState extends State<RichEditor> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isIOS) {
+    if (!kIsWeb && Platform.isIOS) {
       _initServer();
     }
   }
@@ -67,7 +67,7 @@ class RichEditorState extends State<RichEditor> {
     if (_controller != null) {
       _controller = null;
     }
-    if (!Platform.isAndroid) {
+    if (!kIsWeb && !Platform.isAndroid) {
       localServer!.close();
     }
     super.dispose();
@@ -96,7 +96,7 @@ class RichEditorState extends State<RichEditor> {
             onWebViewCreated: (controller) async {
               _controller = controller;
               setState(() {});
-              if (!Platform.isAndroid) {
+              if (!kIsWeb && !Platform.isAndroid) {
                 await _loadHtmlFromAssets();
               } else {
                 await _controller!.loadUrl(
