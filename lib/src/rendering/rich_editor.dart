@@ -54,8 +54,7 @@ class RichEditorState extends State<RichEditor> {
 
   void _handleRequest(HttpRequest request) {
     try {
-      if (request.method == 'GET' &&
-          request.uri.queryParameters['query'] == "getRawTeXHTML") {
+      if (request.method == 'GET' && request.uri.queryParameters['query'] == "getRawTeXHTML") {
       } else {}
     } catch (e) {
       print('Exception in handleRequest: $e');
@@ -93,6 +92,11 @@ class RichEditorState extends State<RichEditor> {
         Expanded(
           child: InAppWebView(
             key: _mapKey,
+            initialOptions: InAppWebViewGroupOptions(
+              android: AndroidInAppWebViewOptions(
+                useHybridComposition: true,
+              ),
+            ),
             onWebViewCreated: (controller) async {
               _controller = controller;
               setState(() {});
@@ -101,8 +105,7 @@ class RichEditorState extends State<RichEditor> {
               } else {
                 await _controller!.loadUrl(
                   urlRequest: URLRequest(
-                    url: Uri.tryParse(
-                        'file:///android_asset/flutter_assets/$assetPath'),
+                    url: Uri.tryParse('file:///android_asset/flutter_assets/$assetPath'),
                   ),
                 );
               }
@@ -148,20 +151,15 @@ class RichEditorState extends State<RichEditor> {
 
   _setInitialValues() async {
     if (widget.value != null) await javascriptExecutor.setHtml(widget.value!);
-    if (widget.editorOptions!.padding != null)
-      await javascriptExecutor.setPadding(widget.editorOptions!.padding!);
+    if (widget.editorOptions!.padding != null) await javascriptExecutor.setPadding(widget.editorOptions!.padding!);
     if (widget.editorOptions!.backgroundColor != null)
-      await javascriptExecutor
-          .setBackgroundColor(widget.editorOptions!.backgroundColor!);
+      await javascriptExecutor.setBackgroundColor(widget.editorOptions!.backgroundColor!);
     if (widget.editorOptions!.baseTextColor != null)
-      await javascriptExecutor
-          .setBaseTextColor(widget.editorOptions!.baseTextColor!);
+      await javascriptExecutor.setBaseTextColor(widget.editorOptions!.baseTextColor!);
     if (widget.editorOptions!.placeholder != null)
-      await javascriptExecutor
-          .setPlaceholder(widget.editorOptions!.placeholder!);
+      await javascriptExecutor.setPlaceholder(widget.editorOptions!.placeholder!);
     if (widget.editorOptions!.baseFontFamily != null)
-      await javascriptExecutor
-          .setBaseFontFamily(widget.editorOptions!.baseFontFamily!);
+      await javascriptExecutor.setBaseFontFamily(widget.editorOptions!.baseFontFamily!);
   }
 
   _addJSListener() async {
@@ -193,8 +191,7 @@ class RichEditorState extends State<RichEditor> {
 
   /// Clear editor content using Javascript
   clear() {
-    _controller!.evaluateJavascript(
-        source: 'document.getElementById(\'editor\').innerHTML = "";');
+    _controller!.evaluateJavascript(source: 'document.getElementById(\'editor\').innerHTML = "";');
   }
 
   /// Focus and Show the keyboard using JavaScript
