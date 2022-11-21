@@ -8,7 +8,6 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:rich_editor/src/models/enum/bar_position.dart';
 import 'package:rich_editor/src/models/rich_editor_options.dart';
 import 'package:rich_editor/src/services/local_server.dart';
-import 'package:rich_editor/src/utils/constants.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/editor_tool_bar.dart';
 
@@ -44,7 +43,7 @@ class RichEditorState extends State<RichEditor> {
   void initState() {
     super.initState();
     
-    if (!kIsWeb && Platform.isIos(context)) {
+    if (!kIsWeb && Platform.isIOS) {
       _initServer();
     }
   }
@@ -69,7 +68,7 @@ class RichEditorState extends State<RichEditor> {
     if (_controller != null) {
       _controller = null;
     }
-    if (!kIsWeb && !Platform.isAndroid(context)) {
+    if (!kIsWeb && !Platform.isAndroid) {
       if (localServer != null) {
         localServer!.close();
       }
@@ -100,7 +99,7 @@ class RichEditorState extends State<RichEditor> {
             onWebViewCreated: (controller) async {
               _controller = controller;
               setState(() {});
-              if (!kIsWeb && !Platform.isAndroid(context)) {
+              if (!kIsWeb && !Platform.isAndroid) {
                 await _loadHtmlFromAssets();
               } else {
                 await _controller!.loadUrl(
