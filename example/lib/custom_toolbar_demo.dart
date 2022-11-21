@@ -77,6 +77,7 @@ class _CustomToolbarDemoState extends State<CustomToolbarDemo> {
           Expanded(
             child: RichEditor(
               key: keyEditor,
+              context: context,
 //         value: '', // initial HTML data
               editorOptions: RichEditorOptions(
                 placeholder: 'Start typing',
