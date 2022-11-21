@@ -54,7 +54,7 @@ class RichEditorState extends State<RichEditor> {
       debugPrint('RichEditor context: $context');
     }
     
-    if (!kIsWeb && Platform.isIos(widget.context!)) {
+    if (!kIsWeb && Platform.isIos(context)) {
       _initServer();
     }
   }
@@ -79,7 +79,7 @@ class RichEditorState extends State<RichEditor> {
     if (_controller != null) {
       _controller = null;
     }
-    if (!kIsWeb && !Platform.isAndroid(widget.context!)) {
+    if (!kIsWeb && !Platform.isAndroid(context)) {
       localServer!.close();
     }
     super.dispose();
