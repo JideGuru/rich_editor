@@ -3,7 +3,6 @@ import 'dart:html' as html;
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -11,6 +10,7 @@ import 'package:rich_editor/src/models/enum/bar_position.dart';
 import 'package:rich_editor/src/models/rich_editor_options.dart';
 import 'package:rich_editor/src/rendering/widgets/editor_tool_bar.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
+import 'package:webview_flutter_web/webview_flutter_web.dart';
 
 class RichEditor extends StatefulWidget {
   final String? value;
@@ -43,6 +43,7 @@ class RichEditorState extends State<RichEditor> {
   @override
   void initState() {
     super.initState();
+    WebView.platform = WebWebViewPlatform();
     loadEditorOnWeb();
   }
 
