@@ -13,7 +13,7 @@ import 'package:rich_editor/src/utils/javascript_executor_base.dart';
 import 'package:rich_editor/src/widgets/editor_tool_bar.dart';
 
 class RichEditor extends StatefulWidget {
-  final BuildContext context;
+  BuildContext? context;
   final String? value;
   final RichEditorOptions? editorOptions;
   final Function(File image)? getImageUrl;
@@ -45,8 +45,16 @@ class RichEditorState extends State<RichEditor> {
   @override
   void initState() {
     super.initState();
+
+    widget.context != null ? widget.context! : context;
+    if (kDebugMode) {
+      print('Widget Context: ${widget.context}');
+      print('Context: $context');
+
+      debugPrint('RichEditor context: $context');
+    }
     
-    if (!kIsWeb && Platform.isIos(widget.context)) {
+    if (!kIsWeb && Platform.isIos(widget.context!)) {
       _initServer();
     }
   }
@@ -71,7 +79,7 @@ class RichEditorState extends State<RichEditor> {
     if (_controller != null) {
       _controller = null;
     }
-    if (!kIsWeb && !Platform.isAndroid(widget.context)) {
+    if (!kIsWeb && !Platform.isAndroid(widget.context!)) {
       localServer!.close();
     }
     super.dispose();
