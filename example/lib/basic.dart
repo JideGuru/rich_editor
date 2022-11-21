@@ -60,7 +60,6 @@ class BasicDemo extends StatelessWidget {
       ),
       body: RichEditor(
         key: keyEditor,
-        context: context,
         value: '''
         Hello, This is a rich text Editor for Flutter. It supports most things like Bold, italics and underline.
         As well as Subscript, Superscript, Colored text, Colors bg text and hyperlink.

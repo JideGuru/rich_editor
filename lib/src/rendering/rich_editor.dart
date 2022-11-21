@@ -70,7 +70,9 @@ class RichEditorState extends State<RichEditor> {
       _controller = null;
     }
     if (!kIsWeb && !Platform.isAndroid(context)) {
-      localServer!.close();
+      if (localServer != null) {
+        localServer!.close();
+      }
     }
     super.dispose();
   }
