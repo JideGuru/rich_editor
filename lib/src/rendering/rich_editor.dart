@@ -42,7 +42,7 @@ class RichEditorState extends State<RichEditor> {
   @override
   void initState() {
     super.initState();
-    
+
     if (!kIsWeb && Platform.isIOS) {
       _initServer();
     }
@@ -55,7 +55,8 @@ class RichEditorState extends State<RichEditor> {
 
   void _handleRequest(HttpRequest request) {
     try {
-      if (request.method == 'GET' && request.uri.queryParameters['query'] == "getRawTeXHTML") {
+      if (request.method == 'GET' &&
+          request.uri.queryParameters['query'] == "getRawTeXHTML") {
       } else {}
     } catch (e) {
       print('Exception in handleRequest: $e');
