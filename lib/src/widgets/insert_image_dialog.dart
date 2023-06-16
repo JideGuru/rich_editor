@@ -65,9 +65,9 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
     final picker = ImagePicker();
     var image;
     if (widget.isVideo) {
-      image = await picker.getVideo(source: ImageSource.gallery);
+      image = await picker.pickVideo(source: ImageSource.gallery);
     } else {
-      image = await picker.getImage(
+      image = await picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 800.0,
         maxHeight: 600.0,

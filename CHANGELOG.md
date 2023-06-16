@@ -6,3 +6,7 @@
 
 * Editor specific settings
 * Video addition feature
+
+
+# 0.0.6
+* Refactor for flutter 3.10

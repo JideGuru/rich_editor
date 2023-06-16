@@ -35,7 +35,6 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
           pickerAreaHeightPercent: 0.7,
           enableAlpha: true,
           displayThumbColor: true,
-          showLabel: true,
           paletteType: PaletteType.hsv,
           pickerAreaBorderRadius: const BorderRadius.only(
             topLeft: const Radius.circular(2.0),

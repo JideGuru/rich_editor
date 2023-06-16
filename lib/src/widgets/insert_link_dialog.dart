@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'custom_dialog_template.dart';
 
 class InsertLinkDialog extends StatelessWidget {
-  TextEditingController link = TextEditingController();
-  TextEditingController label = TextEditingController();
+  final link = TextEditingController();
+  final label = TextEditingController();
 
   @override
   Widget build(BuildContext context) {

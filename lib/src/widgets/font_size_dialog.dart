@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'html_text.dart';
 
 class FontSizeDialog extends StatelessWidget {
-  List formats = [
+  final List formats = [
     {'id': '1', 'title': '<small><small><small>Teeny</small></small></small>'},
     {'id': '2', 'title': '<small><small>Very small</small></small>'},
     {'id': '3', 'title': '<small>Small</small>'},

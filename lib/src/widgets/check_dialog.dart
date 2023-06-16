@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'custom_dialog_template.dart';
 
 class CheckDialog extends StatelessWidget {
-  TextEditingController text = TextEditingController();
+  CheckDialog();
+  final _textEditingController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -11,11 +12,11 @@ class CheckDialog extends StatelessWidget {
       body: [
         Text('Checkbox title'),
         TextField(
-          controller: text,
+          controller: _textEditingController,
           decoration: InputDecoration(hintText: ''),
         ),
       ],
-      onDone: () => Navigator.pop(context, text.text),
+      onDone: () => Navigator.pop(context, _textEditingController.text),
       onCancel: () => Navigator.pop(context),
     );
   }
