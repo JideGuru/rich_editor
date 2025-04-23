@@ -77,7 +77,7 @@ class RichEditorState extends State<RichEditor> {
     final filePath = assetPath;
     _controller!.loadUrl(
       urlRequest: URLRequest(
-        url: Uri.tryParse('http://localhost:$port/$filePath'),
+        url: WebUri.uri(Uri.tryParse('http://localhost:$port/$filePath')!),
       ),
     );
   }
@@ -101,8 +101,10 @@ class RichEditorState extends State<RichEditor> {
               } else {
                 await _controller!.loadUrl(
                   urlRequest: URLRequest(
-                    url: Uri.tryParse(
-                        'file:///android_asset/flutter_assets/$assetPath'),
+                    url: WebUri.uri(
+                      Uri.tryParse(
+                          'file:///android_asset/flutter_assets/$assetPath')!,
+                    ),
                   ),
                 );
               }
@@ -119,8 +121,8 @@ class RichEditorState extends State<RichEditor> {
             gestureRecognizers: [
               Factory(() => VerticalDragGestureRecognizer()..onUpdate = (_) {}),
             ].toSet(),
-            onLoadError: (controller, url, code, e) {
-              print("error $e $code");
+            onReceivedError: (controller, url, e) {
+              print("error $e ");
             },
             onConsoleMessage: (controller, consoleMessage) async {
               print(
