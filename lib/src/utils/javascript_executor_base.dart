@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -59,7 +61,8 @@ class JavascriptExecutorBase {
   /// Display HTML data in editor
   setHtml(String html) async {
     String? baseUrl;
-    await executeJavascript("setHtml('" + encodeHtml(html) + "', '$baseUrl');");
+    await executeJavascript(
+        "setHtml(${jsonEncode(html)}, ${jsonEncode(baseUrl)});");
     htmlField = html;
   }
 
