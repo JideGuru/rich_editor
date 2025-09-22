@@ -44,6 +44,7 @@ class RichEditorState extends State<RichEditor> {
   JavascriptExecutorBase javascriptExecutor = JavascriptExecutorBase();
   bool _isWebViewLoaded = false;
   Timer? _loadTimeout;
+  bool _isUploadingMedia = false;
 
   @override
   void initState() {
@@ -91,69 +92,112 @@ class RichEditorState extends State<RichEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        Visibility(
-          visible: widget.editorOptions!.barPosition == BarPosition.top,
-          child: _buildToolBar(),
+        Column(
+          children: [
+            Visibility(
+              visible: widget.editorOptions!.barPosition == BarPosition.top,
+              child: _buildToolBar(),
+            ),
+            Expanded(
+              child: InAppWebView(
+                key: _mapKey,
+                onWebViewCreated: (controller) async {
+                  _controller = controller;
+                  setState(() {});
+
+                  // Set a timeout fallback to ensure editor loads even if onLoadStop doesn't fire properly
+                  _loadTimeout = Timer(const Duration(seconds: 3), () {
+                    if (!_isWebViewLoaded && _controller != null) {
+                      debugPrint(
+                          'WebView load timeout - forcing initialization');
+                      _forceInitialization();
+                    }
+                  });
+
+                  if (!kIsWeb && !Platform.isAndroid) {
+                    await _loadHtmlFromAssets();
+                  } else {
+                    await _controller!.loadUrl(
+                      urlRequest: URLRequest(
+                        url: WebUri.uri(
+                          Uri.tryParse(
+                              'file:///android_asset/flutter_assets/$assetPath')!,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                onLoadStop: (controller, link) async {
+                  debugPrint('WebView onLoadStop: ${link?.toString()}');
+                  _handleWebViewLoaded();
+                },
+                // javascriptMode: JavascriptMode.unrestricted,
+                // gestureNavigationEnabled: false,
+                gestureRecognizers: {
+                  Factory(
+                      () => VerticalDragGestureRecognizer()..onUpdate = (_) {}),
+                },
+                onReceivedError: (controller, url, e) {
+                  debugPrint('WebView error: $e');
+                },
+                onConsoleMessage: (controller, consoleMessage) async {
+                  debugPrint('WebView Message: $consoleMessage');
+                },
+              ),
+            ),
+            Visibility(
+              visible: widget.editorOptions!.barPosition == BarPosition.bottom,
+              child: _buildToolBar(),
+            ),
+          ],
         ),
-        Expanded(
-          child: InAppWebView(
-            key: _mapKey,
-            onWebViewCreated: (controller) async {
-              _controller = controller;
-              setState(() {});
-
-              // Set a timeout fallback to ensure editor loads even if onLoadStop doesn't fire properly
-              _loadTimeout = Timer(const Duration(seconds: 3), () {
-                if (!_isWebViewLoaded && _controller != null) {
-                  debugPrint('WebView load timeout - forcing initialization');
-                  _forceInitialization();
-                }
-              });
-
-              if (!kIsWeb && !Platform.isAndroid) {
-                await _loadHtmlFromAssets();
-              } else {
-                await _controller!.loadUrl(
-                  urlRequest: URLRequest(
-                    url: WebUri.uri(
-                      Uri.tryParse(
-                          'file:///android_asset/flutter_assets/$assetPath')!,
+        // Media upload loading overlay
+        if (_isUploadingMedia)
+          Positioned(
+            top: 0,
+            right: 16,
+            child: Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.white,
+                      ),
                     ),
                   ),
-                );
-              }
-            },
-            onLoadStop: (controller, link) async {
-              debugPrint('WebView onLoadStop: ${link?.toString()}');
-              _handleWebViewLoaded();
-            },
-            // javascriptMode: JavascriptMode.unrestricted,
-            // gestureNavigationEnabled: false,
-            gestureRecognizers: {
-              Factory(() => VerticalDragGestureRecognizer()..onUpdate = (_) {}),
-            },
-            onReceivedError: (controller, url, e) {
-              debugPrint('WebView error: $e');
-            },
-            onConsoleMessage: (controller, consoleMessage) async {
-              debugPrint('WebView Message: $consoleMessage');
-            },
+                  SizedBox(width: 8),
+                  Text(
+                    'Uploading...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        Visibility(
-          visible: widget.editorOptions!.barPosition == BarPosition.bottom,
-          child: _buildToolBar(),
-        ),
       ],
     );
   }
 
   _buildToolBar() {
     return EditorToolBar(
-      getImageUrl: widget.getImageUrl,
-      getVideoUrl: widget.getVideoUrl,
+      getImageUrl: widget.getImageUrl != null ? uploadImageWithLoader : null,
+      getVideoUrl: widget.getVideoUrl != null ? uploadVideoWithLoader : null,
       javascriptExecutor: javascriptExecutor,
       enableVideo: widget.editorOptions!.enableVideo,
       disableVideo: widget.disableVideo,
@@ -269,5 +313,35 @@ class RichEditorState extends State<RichEditor> {
   /// Disable Editing (Could be used for a 'view mode')
   disableEditing() async {
     await javascriptExecutor.setInputEnabled(false);
+  }
+
+  /// Upload image with loading state
+  Future<String> uploadImageWithLoader(File image) async {
+    setState(() {
+      _isUploadingMedia = true;
+    });
+    try {
+      final result = await widget.getImageUrl!(image);
+      return result;
+    } finally {
+      setState(() {
+        _isUploadingMedia = false;
+      });
+    }
+  }
+
+  /// Upload video with loading state
+  Future<String> uploadVideoWithLoader(File video) async {
+    setState(() {
+      _isUploadingMedia = true;
+    });
+    try {
+      final result = await widget.getVideoUrl!(video);
+      return result;
+    } finally {
+      setState(() {
+        _isUploadingMedia = false;
+      });
+    }
   }
 }

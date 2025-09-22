@@ -220,7 +220,8 @@ class JavascriptExecutorBase {
   /// Insert hyper link / make selected text an hyperlink
   insertLink(String url, String title) async {
     if (url.isEmpty) return;
-    await executeJavascript("insertLink('$url', '$title');");
+    await executeJavascript(
+        "insertLink(${jsonEncode(url)}, ${jsonEncode(title)});");
   }
 
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
@@ -239,7 +240,7 @@ class JavascriptExecutorBase {
     height ??= 300;
     alt ??= '';
     await executeJavascript(
-      "insertImage('$url', '$alt', '$width', '$height', $rotation);",
+      "insertImage(${jsonEncode(url)}, ${jsonEncode(alt)}, '$width', '$height', $rotation);",
     );
   }
 
@@ -264,7 +265,7 @@ class JavascriptExecutorBase {
       url = 'https://www.youtube.com/embed/$youtubeId';
     }
     await executeJavascript(
-      "insertVideo('$url', '$width', '$height', $local);",
+      "insertVideo(${jsonEncode(url)}, '$width', '$height', $local);",
     );
   }
 

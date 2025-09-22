@@ -372,7 +372,7 @@ class EditorToolBar extends StatelessWidget {
                             valueColor: AlwaysStoppedAnimation<Color>(
                                 Theme.of(context)
                                     .primaryColor
-                                    .withOpacity(0.6)),
+                                    .withValues(alpha: 0.6)),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -384,7 +384,7 @@ class EditorToolBar extends StatelessWidget {
                                         .textTheme
                                         .bodySmall
                                         ?.color
-                                        ?.withOpacity(0.6),
+                                        ?.withValues(alpha: 0.6),
                                   ),
                         ),
                       ],
