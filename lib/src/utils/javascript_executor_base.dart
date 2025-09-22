@@ -51,6 +51,9 @@ class JavascriptExecutorBase {
 
   /// Run Javascript commands in the editor using the webview controller
   executeJavascript(String command) async {
+    if (_controller == null) {
+      return null; // Silently return if controller is not ready
+    }
     return await _controller!.evaluateJavascript(source: 'editor.$command');
   }
 

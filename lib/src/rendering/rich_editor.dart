@@ -42,6 +42,7 @@ class RichEditorState extends State<RichEditor> {
   String html = '';
   LocalServer? localServer;
   JavascriptExecutorBase javascriptExecutor = JavascriptExecutorBase();
+  bool _isWebViewLoaded = false;
 
   @override
   void initState() {
@@ -118,6 +119,9 @@ class RichEditorState extends State<RichEditor> {
                 javascriptExecutor.init(_controller!);
                 await _setInitialValues();
                 _addJSListener();
+                setState(() {
+                  _isWebViewLoaded = true;
+                });
               }
             },
             // javascriptMode: JavascriptMode.unrestricted,
@@ -149,6 +153,7 @@ class RichEditorState extends State<RichEditor> {
       enableVideo: widget.editorOptions!.enableVideo,
       disableVideo: widget.disableVideo,
       onDisabledVideoTap: widget.onDisabledVideoTap,
+      isWebViewLoaded: _isWebViewLoaded,
     );
   }
 

@@ -7,10 +7,11 @@ class TabButton extends StatelessWidget {
   final bool selected;
   final bool disabled;
 
-  const TabButton({super.key, 
-    this.icon, 
-    this.onTap, 
-    this.tooltip = '', 
+  const TabButton({
+    super.key,
+    this.icon,
+    this.onTap,
+    this.tooltip = '',
     this.selected = false,
     this.disabled = false,
   });

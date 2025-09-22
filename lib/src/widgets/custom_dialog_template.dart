@@ -5,7 +5,8 @@ class CustomDialogTemplate extends StatelessWidget {
   final Function? onDone;
   final Function? onCancel;
 
-  const CustomDialogTemplate({super.key, this.body, this.onDone, this.onCancel});
+  const CustomDialogTemplate(
+      {super.key, this.body, this.onDone, this.onCancel});
 
   @override
   Widget build(BuildContext context) {
