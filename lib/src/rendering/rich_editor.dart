@@ -43,6 +43,7 @@ class RichEditorState extends State<RichEditor> {
   LocalServer? localServer;
   JavascriptExecutorBase javascriptExecutor = JavascriptExecutorBase();
   bool _isWebViewLoaded = false;
+  Timer? _loadTimeout;
 
   @override
   void initState() {
@@ -69,6 +70,7 @@ class RichEditorState extends State<RichEditor> {
 
   @override
   void dispose() {
+    _loadTimeout?.cancel();
     if (_controller != null) {
       _controller = null;
     }
@@ -101,6 +103,15 @@ class RichEditorState extends State<RichEditor> {
             onWebViewCreated: (controller) async {
               _controller = controller;
               setState(() {});
+
+              // Set a timeout fallback to ensure editor loads even if onLoadStop doesn't fire properly
+              _loadTimeout = Timer(const Duration(seconds: 3), () {
+                if (!_isWebViewLoaded && _controller != null) {
+                  debugPrint('WebView load timeout - forcing initialization');
+                  _forceInitialization();
+                }
+              });
+
               if (!kIsWeb && !Platform.isAndroid) {
                 await _loadHtmlFromAssets();
               } else {
@@ -115,14 +126,8 @@ class RichEditorState extends State<RichEditor> {
               }
             },
             onLoadStop: (controller, link) async {
-              if (link!.path != 'blank') {
-                javascriptExecutor.init(_controller!);
-                await _setInitialValues();
-                _addJSListener();
-                setState(() {
-                  _isWebViewLoaded = true;
-                });
-              }
+              debugPrint('WebView onLoadStop: ${link?.toString()}');
+              _handleWebViewLoaded();
             },
             // javascriptMode: JavascriptMode.unrestricted,
             // gestureNavigationEnabled: false,
@@ -186,6 +191,27 @@ class RichEditorState extends State<RichEditor> {
         callback: (c) {
           debugPrint('Editor state changed callback: $c');
         });
+  }
+
+  /// Handle WebView loaded - simplified to always initialize
+  _handleWebViewLoaded() async {
+    if (!_isWebViewLoaded && _controller != null) {
+      _loadTimeout?.cancel(); // Cancel timeout since we're loading now
+      javascriptExecutor.init(_controller!);
+      await _setInitialValues();
+      _addJSListener();
+      setState(() {
+        _isWebViewLoaded = true;
+      });
+    }
+  }
+
+  /// Force initialization as fallback when timeout occurs
+  _forceInitialization() async {
+    if (!_isWebViewLoaded && _controller != null) {
+      debugPrint('Force initialization triggered');
+      await _handleWebViewLoaded();
+    }
   }
 
   /// Get current HTML from editor
