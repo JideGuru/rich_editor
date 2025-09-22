@@ -24,7 +24,7 @@ class FontListParser {
     } else {
       throw ("fonts.xml does not exist on this system");
     }
-    Xml2Json xml2json = new Xml2Json();
+    Xml2Json xml2json = Xml2Json();
     xml2json.parse(File(fontsXml).readAsStringSync());
     Map json = jsonDecode(xml2json.toGData());
     Config parser = Config.fromJson(json['familyset']);
@@ -40,11 +40,11 @@ class FontListParser {
           }
         }
         if (font.t != null) {
-          SystemFont systemFont = new SystemFont(family.name!, font.t!);
+          SystemFont systemFont = SystemFont(family.name!, font.t!);
           if (fonts.contains(systemFont)) {
             continue;
           }
-          fonts.add(new SystemFont(family.name!, font.t!));
+          fonts.add(SystemFont(family.name!, font.t!));
         }
       }
     }
@@ -61,7 +61,7 @@ class FontListParser {
         }
         for (Font font in family.fonts!) {
           if (font.weight == alias.weight) {
-            fonts.add(new SystemFont(alias.name!, font.t ?? ''));
+            fonts.add(SystemFont(alias.name!, font.t ?? ''));
             break;
           }
         }
@@ -71,8 +71,6 @@ class FontListParser {
     if (fonts.isEmpty) {
       throw Exception("No system fonts found.");
     }
-    // fonts
-    // print(fonts);
     return fonts;
   }
 
@@ -94,9 +92,9 @@ class FontListParser {
       ];
       List<SystemFont> fonts = <SystemFont>[];
       for (List names in defaultSystemFonts) {
-        File file = new File("/system/fonts/" + names[1]);
+        File file = File('/system/fonts/${names[1]}');
         if (file.existsSync()) {
-          fonts.add(new SystemFont(names[0], file.path));
+          fonts.add(SystemFont(names[0], file.path));
         }
       }
       return fonts;

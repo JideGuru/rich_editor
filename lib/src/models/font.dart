@@ -20,22 +20,22 @@ class Font {
     t = json[r'$t'];
     fallbackFor = json['fallbackFor'];
     if (json['axis'] is Map) {
-      axis = json['axis'] != null ? new Axis.fromJson(json['axis']) : null;
+      axis = json['axis'] != null ? Axis.fromJson(json['axis']) : null;
     }
 
     index = json['index'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['weight'] = this.weight;
-    data['style'] = this.style;
-    data[r'$t'] = this.t;
-    data['fallbackFor'] = this.fallbackFor;
-    if (this.axis != null) {
-      data['axis'] = this.axis!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['weight'] = weight;
+    data['style'] = style;
+    data[r'$t'] = t;
+    data['fallbackFor'] = fallbackFor;
+    if (axis != null) {
+      data['axis'] = axis!.toJson();
     }
-    data['index'] = this.index;
+    data['index'] = index;
     return data;
   }
 }
@@ -52,9 +52,9 @@ class Axis {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['tag'] = this.tag;
-    data['stylevalue'] = this.stylevalue;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['tag'] = tag;
+    data['stylevalue'] = stylevalue;
     return data;
   }
 }

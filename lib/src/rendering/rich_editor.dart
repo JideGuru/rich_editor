@@ -14,16 +14,20 @@ import 'package:rich_editor/src/widgets/editor_tool_bar.dart';
 class RichEditor extends StatefulWidget {
   final String? value;
   final RichEditorOptions? editorOptions;
-  final Function(File image)? getImageUrl;
-  final Function(File video)? getVideoUrl;
+  final Future<String> Function(File image)? getImageUrl;
+  final Future<String> Function(File video)? getVideoUrl;
+  final bool? disableVideo;
+  final VoidCallback? onDisabledVideoTap;
 
-  RichEditor({
-    Key? key,
+  const RichEditor({
+    super.key,
     this.value,
     this.editorOptions,
     this.getImageUrl,
     this.getVideoUrl,
-  }) : super(key: key);
+    this.disableVideo = false,
+    this.onDisabledVideoTap,
+  });
 
   @override
   RichEditorState createState() => RichEditorState();
@@ -58,7 +62,7 @@ class RichEditorState extends State<RichEditor> {
           request.uri.queryParameters['query'] == "getRawTeXHTML") {
       } else {}
     } catch (e) {
-      print('Exception in handleRequest: $e');
+      debugPrint('Exception in handleRequest: $e');
     }
   }
 
@@ -87,7 +91,7 @@ class RichEditorState extends State<RichEditor> {
     return Column(
       children: [
         Visibility(
-          visible: widget.editorOptions!.barPosition == BarPosition.TOP,
+          visible: widget.editorOptions!.barPosition == BarPosition.top,
           child: _buildToolBar(),
         ),
         Expanded(
@@ -118,21 +122,19 @@ class RichEditorState extends State<RichEditor> {
             },
             // javascriptMode: JavascriptMode.unrestricted,
             // gestureNavigationEnabled: false,
-            gestureRecognizers: [
+            gestureRecognizers: {
               Factory(() => VerticalDragGestureRecognizer()..onUpdate = (_) {}),
-            ].toSet(),
+            },
             onReceivedError: (controller, url, e) {
-              print("error $e ");
+              debugPrint('WebView error: $e');
             },
             onConsoleMessage: (controller, consoleMessage) async {
-              print(
-                'WebView Message: $consoleMessage',
-              );
+              debugPrint('WebView Message: $consoleMessage');
             },
           ),
         ),
         Visibility(
-          visible: widget.editorOptions!.barPosition == BarPosition.BOTTOM,
+          visible: widget.editorOptions!.barPosition == BarPosition.bottom,
           child: _buildToolBar(),
         ),
       ],
@@ -145,32 +147,39 @@ class RichEditorState extends State<RichEditor> {
       getVideoUrl: widget.getVideoUrl,
       javascriptExecutor: javascriptExecutor,
       enableVideo: widget.editorOptions!.enableVideo,
+      disableVideo: widget.disableVideo,
+      onDisabledVideoTap: widget.onDisabledVideoTap,
     );
   }
 
   _setInitialValues() async {
     if (widget.value != null) await javascriptExecutor.setHtml(widget.value!);
-    if (widget.editorOptions!.padding != null)
+    if (widget.editorOptions!.padding != null) {
       await javascriptExecutor.setPadding(widget.editorOptions!.padding!);
-    if (widget.editorOptions!.backgroundColor != null)
+    }
+    if (widget.editorOptions!.backgroundColor != null) {
       await javascriptExecutor
           .setBackgroundColor(widget.editorOptions!.backgroundColor!);
-    if (widget.editorOptions!.baseTextColor != null)
+    }
+    if (widget.editorOptions!.baseTextColor != null) {
       await javascriptExecutor
           .setBaseTextColor(widget.editorOptions!.baseTextColor!);
-    if (widget.editorOptions!.placeholder != null)
+    }
+    if (widget.editorOptions!.placeholder != null) {
       await javascriptExecutor
           .setPlaceholder(widget.editorOptions!.placeholder!);
-    if (widget.editorOptions!.baseFontFamily != null)
+    }
+    if (widget.editorOptions!.baseFontFamily != null) {
       await javascriptExecutor
           .setBaseFontFamily(widget.editorOptions!.baseFontFamily!);
+    }
   }
 
   _addJSListener() async {
     _controller!.addJavaScriptHandler(
         handlerName: 'editor-state-changed-callback://',
         callback: (c) {
-          print('Callback $c');
+          debugPrint('Editor state changed callback: $c');
         });
   }
 
@@ -178,7 +187,9 @@ class RichEditorState extends State<RichEditor> {
   Future<String?> getHtml() async {
     try {
       html = await javascriptExecutor.getCurrentHtml();
-    } catch (e) {}
+    } catch (e) {
+      debugPrint('Exception in getHtml: $e');
+    }
     return html;
   }
 
@@ -207,17 +218,8 @@ class RichEditorState extends State<RichEditor> {
 
   /// Add custom CSS code to Editor
   loadCSS(String cssFile) {
-    var jsCSSImport = "(function() {" +
-        "    var head  = document.getElementsByTagName(\"head\")[0];" +
-        "    var link  = document.createElement(\"link\");" +
-        "    link.rel  = \"stylesheet\";" +
-        "    link.type = \"text/css\";" +
-        "    link.href = \"" +
-        cssFile +
-        "\";" +
-        "    link.media = \"all\";" +
-        "    head.appendChild(link);" +
-        "}) ();";
+    var jsCSSImport =
+        "(function() {    var head  = document.getElementsByTagName(\"head\")[0];    var link  = document.createElement(\"link\");    link.rel  = \"stylesheet\";    link.type = \"text/css\";    link.href = \"$cssFile\";    link.media = \"all\";    head.appendChild(link);}) ();";
     _controller!.evaluateJavascript(source: jsCSSImport);
   }
 

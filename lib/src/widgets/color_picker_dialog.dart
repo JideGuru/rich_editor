@@ -4,10 +4,10 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 class ColorPickerDialog extends StatefulWidget {
   final Color? color;
 
-  ColorPickerDialog({this.color});
+  const ColorPickerDialog({super.key, this.color});
 
   @override
-  _ColorPickerDialogState createState() => _ColorPickerDialogState();
+  State<ColorPickerDialog> createState() => _ColorPickerDialogState();
 }
 
 class _ColorPickerDialogState extends State<ColorPickerDialog> {
@@ -37,15 +37,15 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
           displayThumbColor: true,
           paletteType: PaletteType.hsv,
           pickerAreaBorderRadius: const BorderRadius.only(
-            topLeft: const Radius.circular(2.0),
-            topRight: const Radius.circular(2.0),
+            topLeft: Radius.circular(2.0),
+            topRight: Radius.circular(2.0),
           ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, color),
-          child: Text('Done'),
+          child: const Text('Done'),
         )
       ],
     );

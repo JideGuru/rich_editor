@@ -1,0 +1,13 @@
+# Basic analysis options for the example app
+# Very minimal rules for demonstration purposes
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "build/**"
+    - "ios/**"
+    - "android/**"
+    - "macos/**"
+    - "web/**"

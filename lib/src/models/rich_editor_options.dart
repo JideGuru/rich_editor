@@ -12,20 +12,12 @@ class RichEditorOptions {
   bool? enableVideo;
 
   RichEditorOptions({
-    Color? backgroundColor,
-    Color? baseTextColor,
-    EdgeInsets? padding,
-    String? placeholder,
-    String? baseFontFamily,
-    BarPosition? barPosition,
-    bool? enableVideo = true,
-  }) {
-    this.backgroundColor = backgroundColor;
-    this.baseTextColor = baseTextColor;
-    this.padding = padding;
-    this.placeholder = placeholder;
-    this.baseFontFamily = baseFontFamily;
-    this.barPosition = barPosition;
-    this.enableVideo = enableVideo;
-  }
+    this.backgroundColor,
+    this.baseTextColor,
+    this.padding,
+    this.placeholder,
+    this.baseFontFamily,
+    this.barPosition,
+    this.enableVideo = true,
+  });
 }

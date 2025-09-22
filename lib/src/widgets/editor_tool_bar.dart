@@ -14,21 +14,25 @@ import 'font_size_dialog.dart';
 import 'heading_dialog.dart';
 
 class EditorToolBar extends StatelessWidget {
-  final Function(File image)? getImageUrl;
-  final Function(File video)? getVideoUrl;
+  final Future<String> Function(File image)? getImageUrl;
+  final Future<String> Function(File video)? getVideoUrl;
   final JavascriptExecutorBase javascriptExecutor;
   final bool? enableVideo;
+  final bool? disableVideo;
+  final VoidCallback? onDisabledVideoTap;
 
-  EditorToolBar({
+  const EditorToolBar({super.key, 
     this.getImageUrl,
     this.getVideoUrl,
     required this.javascriptExecutor,
     this.enableVideo,
+    this.disableVideo = false,
+    this.onDisabledVideoTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 54.0,
       child: Column(
         children: [
@@ -62,8 +66,9 @@ class EditorToolBar extends StatelessWidget {
                         return InsertLinkDialog();
                       },
                     );
-                    if (link != null)
+                    if (link != null) {
                       await javascriptExecutor.insertLink(link[0], link[1]);
+                    }
                   },
                 ),
                 TabButton(
@@ -73,7 +78,7 @@ class EditorToolBar extends StatelessWidget {
                     var link = await showDialog(
                       context: context,
                       builder: (_) {
-                        return InsertImageDialog();
+                        return const InsertImageDialog();
                       },
                     );
                     if (link != null) {
@@ -92,11 +97,16 @@ class EditorToolBar extends StatelessWidget {
                   child: TabButton(
                     tooltip: 'Insert video',
                     icon: Icons.video_call_sharp,
+                    disabled: disableVideo!,
                     onTap: () async {
+                      if (disableVideo!) {
+                        onDisabledVideoTap?.call();
+                        return;
+                      }
                       var link = await showDialog(
                         context: context,
                         builder: (_) {
-                          return InsertImageDialog(isVideo: true);
+                          return const InsertImageDialog(isVideo: true);
                         },
                       );
                       if (link != null) {
@@ -175,7 +185,7 @@ class EditorToolBar extends StatelessWidget {
                       // isScrollControlled: true,
                       context: context,
                       builder: (_) {
-                        return HeadingDialog();
+                        return const HeadingDialog();
                       },
                     );
                     if (command != null) {
@@ -203,11 +213,12 @@ class EditorToolBar extends StatelessWidget {
                         // isScrollControlled: true,
                         context: context,
                         builder: (_) {
-                          return FontsDialog();
+                          return const FontsDialog();
                         },
                       );
-                      if (command != null)
+                      if (command != null) {
                         await javascriptExecutor.setFontName(command);
+                      }
                     },
                   ),
                 ),
@@ -219,12 +230,13 @@ class EditorToolBar extends StatelessWidget {
                       // isScrollControlled: true,
                       context: context,
                       builder: (_) {
-                        return FontSizeDialog();
+                        return const FontSizeDialog();
                       },
                     );
-                    if (command != null)
+                    if (command != null) {
                       await javascriptExecutor
                           .setFontSize(int.tryParse(command)!);
+                    }
                   },
                 ),
                 TabButton(
@@ -234,11 +246,12 @@ class EditorToolBar extends StatelessWidget {
                     var color = await showDialog(
                       context: context,
                       builder: (BuildContext context) {
-                        return ColorPickerDialog(color: Colors.blue);
+                        return const ColorPickerDialog(color: Colors.blue);
                       },
                     );
-                    if (color != null)
+                    if (color != null) {
                       await javascriptExecutor.setTextColor(color);
+                    }
                   },
                 ),
                 TabButton(
@@ -248,11 +261,12 @@ class EditorToolBar extends StatelessWidget {
                     var color = await showDialog(
                       context: context,
                       builder: (BuildContext context) {
-                        return ColorPickerDialog(color: Colors.blue);
+                        return const ColorPickerDialog(color: Colors.blue);
                       },
                     );
-                    if (color != null)
+                    if (color != null) {
                       await javascriptExecutor.setTextBackgroundColor(color);
+                    }
                   },
                 ),
                 TabButton(
@@ -321,8 +335,9 @@ class EditorToolBar extends StatelessWidget {
                         return CheckDialog();
                       },
                     );
-                    if (text != null)
+                    if (text != null) {
                       await javascriptExecutor.insertCheckbox(text);
+                    }
                   },
                 ),
 

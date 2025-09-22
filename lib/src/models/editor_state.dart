@@ -19,10 +19,10 @@ class EditorState {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['didHtmlChange'] = this.didHtmlChange;
-    data['html'] = this.html;
-    data['commandStates'] = this.commandStates;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['didHtmlChange'] = didHtmlChange;
+    data['html'] = html;
+    data['commandStates'] = commandStates;
     return data;
   }
 }

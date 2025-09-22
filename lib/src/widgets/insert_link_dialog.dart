@@ -6,22 +6,24 @@ class InsertLinkDialog extends StatelessWidget {
   final link = TextEditingController();
   final label = TextEditingController();
 
+  InsertLinkDialog({super.key});
+
   @override
   Widget build(BuildContext context) {
     return CustomDialogTemplate(
       body: [
-        Text('Link'),
+        const Text('Link'),
         TextField(
           controller: link,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'type link here',
           ),
         ),
-        SizedBox(height: 20.0),
-        Text('Label'),
+        const SizedBox(height: 20.0),
+        const Text('Label'),
         TextField(
           controller: label,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'type label text here',
           ),
         ),

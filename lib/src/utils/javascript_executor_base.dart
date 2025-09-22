@@ -216,17 +216,25 @@ class JavascriptExecutorBase {
   // Insert element
   /// Insert hyper link / make selected text an hyperlink
   insertLink(String url, String title) async {
+    if (url.isEmpty) return;
     await executeJavascript("insertLink('$url', '$title');");
   }
 
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
   /// Rotation can be one of the following values: 0, 90, 180, 270.
-  insertImage(String url,
-      {String? alt, int? width, int? height, int? rotation}) async {
-    if (rotation == null) rotation = 0;
-    if (width == null) width = 300;
-    if (height == null) height = 300;
-    if (alt == null) alt = '';
+  insertImage(
+    String url, {
+    String? alt,
+    int? width,
+    int? height,
+    int? rotation,
+  }) async {
+    if (url.isEmpty) return;
+
+    rotation ??= 0;
+    width ??= 300;
+    height ??= 300;
+    alt ??= '';
     await executeJavascript(
       "insertImage('$url', '$alt', '$width', '$height', $rotation);",
     );
@@ -234,12 +242,18 @@ class JavascriptExecutorBase {
 
   /// Insert video from Youtube or Device
   /// might work with dailymotion but i've not tested that
-  insertVideo(String url,
-      {int? width, int? height, bool fromDevice = true}) async {
+  insertVideo(
+    String url, {
+    int? width,
+    int? height,
+    bool fromDevice = true,
+  }) async {
+    if (url.isEmpty) return;
+
     bool? local;
     local = fromDevice ? true : null;
-    if (width == null) width = 300;
-    if (height == null) height = 220;
+    width ??= 300;
+    height ??= 220;
     // check if link is yt link
     if (url.contains('youtu')) {
       // Get Video id from link.
@@ -325,12 +339,12 @@ class JavascriptExecutorBase {
 
   /// Set editor's width in pixels
   setEditorWidth(int px) async {
-    await executeJavascript("setWidth('" + px.toString() + "px');");
+    await executeJavascript("setWidth('${px}px');");
   }
 
   /// Set editor's height in pixels
   setEditorHeight(int px) async {
-    await executeJavascript("setHeight('" + px.toString() + "px');");
+    await executeJavascript("setHeight('${px}px');");
   }
 
   /// Enable text input on editor
@@ -404,65 +418,65 @@ class JavascriptExecutorBase {
 // }
 //
 // determineDerivedCommandStates(Map<CommandName, CommandState> commandStates) {
-//   if (commandStates[CommandName.FORMATBLOCK] != null) {
-//     var formatCommandState = commandStates[CommandName.FORMATBLOCK];
+//   if (commandStates[CommandName.formatBlock] != null) {
+//     var formatCommandState = commandStates[CommandName.formatBlock];
 //     commandStates.update(
-//       CommandName.H1,
+//       CommandName.h1,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "h1")),
 //     );
 //     commandStates.update(
-//         CommandName.H2,
+//         CommandName.h2,
 //         (val) => CommandState(formatCommandState!.executable,
 //             isFormatActivated(formatCommandState, "h2")));
 //     commandStates.update(
-//       CommandName.H3,
+//       CommandName.h3,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "h3")),
 //     );
 //     commandStates.update(
-//       CommandName.H4,
+//       CommandName.h4,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "h4")),
 //     );
 //     commandStates.update(
-//       CommandName.H5,
+//       CommandName.h5,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "h5")),
 //     );
 //     commandStates.update(
-//       CommandName.H6,
+//       CommandName.h6,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "h6")),
 //     );
 //     commandStates.update(
-//       CommandName.P,
+//       CommandName.p,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "p")),
 //     );
 //     commandStates.update(
-//       CommandName.PRE,
+//       CommandName.pre,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "pre")),
 //     );
 //     commandStates.update(
-//       CommandName.BR,
+//       CommandName.br,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "")),
 //     );
 //     commandStates.update(
-//       CommandName.BLOCKQUOTE,
+//       CommandName.blockQuote,
 //       (val) => CommandState(formatCommandState!.executable,
 //           isFormatActivated(formatCommandState, "blockquote")),
 //     );
 //   }
 //
-//   if (commandStates[CommandName.INSERTHTML] != null) {
-//     CommandState? insertHtmlState = commandStates[CommandName.INSERTHTML];
-//     commandStates.update(CommandName.INSERTLINK, (val) => insertHtmlState!);
-//     commandStates.update(CommandName.INSERTIMAGE, (val) => insertHtmlState!);
+//   if (commandStates[CommandName.insertHtml] != null) {
+//     CommandState? insertHtmlState = commandStates[CommandName.insertHtml];
+//     commandStates.update(CommandName.insertLink, (val) => insertHtmlState!);
+//     commandStates.update(CommandName.insertImage, (val) => insertHtmlState!);
 //     commandStates.update(
-//         CommandName.INSERTCHECKBOX, (val) => insertHtmlState!);
+//         CommandName.insertCheckbox, (val) => insertHtmlState!);
 //   }
 // }
 //

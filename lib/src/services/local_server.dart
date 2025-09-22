@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:mime/mime.dart';
 
@@ -16,19 +17,19 @@ class LocalServer {
 
   ///Closes the server.
   Future<void> close() async {
-    if (this.server != null) {
-      await this.server?.close(force: true);
-      this.server = null;
+    if (server != null) {
+      await server?.close(force: true);
+      server = null;
     }
   }
 
   ///Starts the server
   Future<void> start(Function(HttpRequest request) request) async {
-    if (this.server != null) {
+    if (server != null) {
       throw Exception('Server already started on http://localhost:$port');
     }
 
-    var completer = new Completer();
+    var completer = Completer();
     runZonedGuarded(
       () {
         HttpServer.bind('localhost', port, shared: true).then((server) {
@@ -44,7 +45,7 @@ class LocalServer {
             try {
               body = (await rootBundle.load(path)).buffer.asUint8List();
             } catch (e) {
-              print(e.toString());
+              debugPrint('Failed to load asset: ${e.toString()}');
               httpRequest.response.close();
               return;
             }
@@ -59,16 +60,15 @@ class LocalServer {
               }
             }
 
-            httpRequest.response.headers.contentType = new ContentType(
-                contentType[0], contentType[1],
-                charset: 'utf-8');
+            httpRequest.response.headers.contentType =
+                ContentType(contentType[0], contentType[1], charset: 'utf-8');
             httpRequest.response.add(body);
             httpRequest.response.close();
           });
           completer.complete();
         });
       },
-      (e, stackTrace) => print('Error: $e $stackTrace'),
+      (e, stackTrace) => debugPrint('LocalServer error: $e $stackTrace'),
     );
     return completer.future;
   }
@@ -83,47 +83,56 @@ class WebSocketServer {
 
   ///Closes the server.
   Future<void> close() async {
-    if (this.server != null) {
-      await this.server?.close(force: true);
-      this.server = null;
+    if (server != null) {
+      await server?.close(force: true);
+      server = null;
     }
   }
 
   ///Starts the server
   Future<void> start() async {
-    if (this.server != null) {
+    if (server != null) {
       throw Exception('Server already started on http://localhost:$port');
     }
-    var completer = new Completer();
+    var completer = Completer();
     runZonedGuarded(
       () {
         HttpServer.bind('localhost', port, shared: true).then(
             (HttpServer server) {
-          print('[+]WebSocket listening at -- ws://localhost:$port/');
+          debugPrint('WebSocket listening at ws://localhost:$port/');
           this.server = server;
           server.listen((HttpRequest request) {
             WebSocketTransformer.upgrade(request).then((WebSocket ws) {
               ws.listen(
                 (data) {
-                  print(
-                      '\t\t${request.connectionInfo?.remoteAddress} -- ${data.toString()}');
-                  Timer(Duration(seconds: 1), () {
-                    if (ws.readyState == WebSocket.open)
+                  debugPrint(
+                      'WebSocket data from ${request.connectionInfo?.remoteAddress}: ${data.toString()}');
+                  Timer(const Duration(seconds: 1), () {
+                    if (ws.readyState == WebSocket.open) {
                       // checking connection state helps to avoid unprecedented errors
-                      ws.add("dfdfdfdfdfd");
+                      ws.add("ping");
+                    }
                   });
                 },
-                onDone: () => print('[+]Done :)'),
-                onError: (err) => print('[!]Error -- ${err.toString()}'),
+                onDone: () => debugPrint('WebSocket connection closed'),
+                onError: (err) =>
+                    debugPrint('WebSocket listen error: ${err.toString()}'),
                 cancelOnError: true,
               );
               // request.response.close();
-            }, onError: (err) => print('[!]Error -- ${err.toString()}'));
-          }, onError: (err) => print('[!]Error -- ${err.toString()}'));
+            },
+                onError: (err) =>
+                    debugPrint('WebSocket upgrade error: ${err.toString()}'));
+          },
+              onError: (err) =>
+                  debugPrint('Server listen error: ${err.toString()}'));
           completer.complete();
-        }, onError: (err) => print('[!]Error -- ${err.toString()}'));
+        },
+            onError: (err) =>
+                debugPrint('Server bind error: ${err.toString()}'));
       },
-      (err, stacktrace) => print('[!]Error -- ${err.toString()}'),
+      (err, stacktrace) =>
+          debugPrint('WebSocketServer error: ${err.toString()}'),
     );
 
     return completer.future;

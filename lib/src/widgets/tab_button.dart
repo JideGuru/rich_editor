@@ -5,31 +5,38 @@ class TabButton extends StatelessWidget {
   final Function? onTap;
   final String tooltip;
   final bool selected;
+  final bool disabled;
 
-  TabButton({this.icon, this.onTap, this.tooltip = '', this.selected = false});
+  const TabButton({super.key, 
+    this.icon, 
+    this.onTap, 
+    this.tooltip = '', 
+    this.selected = false,
+    this.disabled = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
       child: Tooltip(
-        message: '$tooltip',
+        message: tooltip,
         child: Container(
           height: 40.0,
           width: 40.0,
           decoration: BoxDecoration(
             color: selected
-                ? Theme.of(context).colorScheme.secondary.withOpacity(0.2)
+                ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2)
                 : Colors.transparent,
-            borderRadius: BorderRadius.all(
+            borderRadius: const BorderRadius.all(
               Radius.circular(5.0),
             ),
           ),
           child: Material(
             type: MaterialType.transparency,
             child: InkWell(
-              borderRadius: BorderRadius.all(Radius.circular(5.0)),
-              onTap: () => onTap!(),
+              borderRadius: const BorderRadius.all(Radius.circular(5.0)),
+              onTap: onTap != null ? () => onTap!() : null,
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(5.0),

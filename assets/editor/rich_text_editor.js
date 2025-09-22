@@ -475,7 +475,6 @@ var editor = {
     },
 
     insertVideo: function(url, width, height, fromDevice) {
-    console.log(url);
         if (fromDevice) {
             this._insertVideo(url, width, height);
         } else {

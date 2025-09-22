@@ -6,6 +6,8 @@ import 'package:rich_editor/src/utils/font_list_parser.dart';
 import 'html_text.dart';
 
 class FontsDialog extends StatelessWidget {
+  const FontsDialog({super.key});
+
   List<SystemFont> getSystemFonts() {
     return FontListParser().getSystemFonts();
   }

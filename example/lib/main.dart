@@ -1,15 +1,13 @@
-import 'dart:convert';
-
-import 'package:example/basic.dart';
-import 'package:example/custom_toolbar_demo.dart';
+import 'package:example/basic_demo.dart';
 import 'package:flutter/material.dart';
-import 'package:rich_editor/rich_editor.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -18,7 +16,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: BasicDemo(),
+      home: const BasicDemo(),
       // home: CustomToolbarDemo(),
     );
   }

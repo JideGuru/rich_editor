@@ -3,17 +3,17 @@ import 'package:flutter/material.dart';
 import 'custom_dialog_template.dart';
 
 class CheckDialog extends StatelessWidget {
-  CheckDialog();
+  CheckDialog({super.key});
   final _textEditingController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return CustomDialogTemplate(
       body: [
-        Text('Checkbox title'),
+        const Text('Checkbox title'),
         TextField(
           controller: _textEditingController,
-          decoration: InputDecoration(hintText: ''),
+          decoration: const InputDecoration(hintText: ''),
         ),
       ],
       onDone: () => Navigator.pop(context, _textEditingController.text),

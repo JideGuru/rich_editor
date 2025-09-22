@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'html_text.dart';
 
-class FontSizeDialog extends StatelessWidget {
+class FontSizeDialog extends StatefulWidget {
+  const FontSizeDialog({super.key});
+
+  @override
+  State<FontSizeDialog> createState() => _FontSizeDialogState();
+}
+
+class _FontSizeDialogState extends State<FontSizeDialog> {
   final List formats = [
     {'id': '1', 'title': '<small><small><small>Teeny</small></small></small>'},
     {'id': '2', 'title': '<small><small>Very small</small></small>'},

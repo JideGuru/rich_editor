@@ -12,10 +12,10 @@ class Alias {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['name'] = this.name;
-    data['to'] = this.to;
-    data['weight'] = this.weight;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['name'] = name;
+    data['to'] = to;
+    data['weight'] = weight;
     return data;
   }
 }

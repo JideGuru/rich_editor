@@ -6,10 +6,10 @@ import 'custom_dialog_template.dart';
 class InsertImageDialog extends StatefulWidget {
   final bool isVideo;
 
-  InsertImageDialog({this.isVideo = false});
+  const InsertImageDialog({super.key, this.isVideo = false});
 
   @override
-  _InsertImageDialogState createState() => _InsertImageDialogState();
+  State<InsertImageDialog> createState() => _InsertImageDialogState();
 }
 
 class _InsertImageDialogState extends State<InsertImageDialog> {
@@ -28,13 +28,13 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
             Text(widget.isVideo ? 'Video link' : 'Image link'),
             ElevatedButton(
               onPressed: () => getImage(),
-              child: Text('...'),
+              child: const Text('...'),
             ),
           ],
         ),
         TextField(
           controller: link,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: '',
           ),
         ),
@@ -44,11 +44,11 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 20.0),
-              Text('Alt text (optional)'),
+              const SizedBox(height: 20.0),
+              const Text('Alt text (optional)'),
               TextField(
                 controller: alt,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: '',
                 ),
               ),
@@ -63,7 +63,7 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
 
   Future getImage() async {
     final picker = ImagePicker();
-    var image;
+    XFile? image;
     if (widget.isVideo) {
       image = await picker.pickVideo(source: ImageSource.gallery);
     } else {

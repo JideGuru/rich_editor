@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 /// from [Color] and [MaterialColor]
 extension ColorX on Color {
   String toHexColorString() {
-    String hex = value.toRadixString(16).replaceAll('ff', '');
-    if (hex.isEmpty) hex = '000000';
+    String hex = (toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0');
     return '#$hex';
   }
 }

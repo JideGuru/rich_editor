@@ -1,6 +1,6 @@
 name: rich_editor
 description: WYSIWYG editor for Flutter with a rich set of supported formatting options.
-version: 0.1.1
+version: 0.2.0
 homepage: https://github.com/JideGuru/rich_editor
 
 environment:
@@ -11,16 +11,17 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_inappwebview: ^6.1.5
-  mime: ^1.0.4
-  image_picker: ^0.8.9
+  mime: ^2.0.0
+  image_picker: ^1.2.0
   flutter_widget_from_html_core: ^0.16.0
   flutter_colorpicker: ^1.1.0
-  path: ^1.8.2
+  path: ^1.9.1
   xml2json: ^5.3.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^4.0.0
 
 flutter:
   assets:

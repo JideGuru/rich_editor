@@ -14,7 +14,7 @@ class Family {
       fonts = <Font>[];
       if (json['font'] is List) {
         json['font'].forEach((v) {
-          fonts!.add(new Font.fromJson(v));
+          fonts!.add(Font.fromJson(v));
         });
       }
     }
@@ -23,13 +23,13 @@ class Family {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['name'] = this.name;
-    if (this.fonts != null) {
-      data['font'] = this.fonts!.map((v) => v.toJson()).toList();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['name'] = name;
+    if (fonts != null) {
+      data['font'] = fonts!.map((v) => v.toJson()).toList();
     }
-    data['lang'] = this.lang;
-    data['variant'] = this.variant;
+    data['lang'] = lang;
+    data['variant'] = variant;
     return data;
   }
 }

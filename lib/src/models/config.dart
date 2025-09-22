@@ -14,13 +14,13 @@ class Config {
     if (json['family'] != null) {
       families = <Family>[];
       json['family'].forEach((v) {
-        families!.add(new Family.fromJson(v));
+        families!.add(Family.fromJson(v));
       });
     }
     if (json['alias'] != null) {
       aliases = <Alias>[];
       json['alias'].forEach((v) {
-        aliases!.add(new Alias.fromJson(v));
+        aliases!.add(Alias.fromJson(v));
       });
     }
   }
