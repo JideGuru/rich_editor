@@ -23,7 +23,6 @@ class _BasicDemoState extends State<BasicDemo> {
             child: const IconButton(
               icon: Icon(Icons.more_vert),
               onPressed: null,
-              disabledColor: Colors.white,
             ),
             itemBuilder: (context) {
               return [
@@ -33,14 +32,18 @@ class _BasicDemoState extends State<BasicDemo> {
                 ),
                 const PopupMenuItem(
                   value: 1,
-                  child: Text('Clear content'),
+                  child: Text('Set HTML'),
                 ),
                 const PopupMenuItem(
                   value: 2,
-                  child: Text('Hide keyboard'),
+                  child: Text('Clear content'),
                 ),
                 const PopupMenuItem(
                   value: 3,
+                  child: Text('Hide keyboard'),
+                ),
+                const PopupMenuItem(
+                  value: 4,
                   child: Text('Show Keyboard'),
                 ),
               ];
@@ -52,12 +55,14 @@ class _BasicDemoState extends State<BasicDemo> {
                   debugPrint('Current HTML: $html');
                   break;
                 case 1:
+                  keyEditor.currentState?.setHtml('');
+                case 2:
                   await keyEditor.currentState?.clear();
                   break;
-                case 2:
+                case 3:
                   await keyEditor.currentState?.unFocus();
                   break;
-                case 3:
+                case 4:
                   await keyEditor.currentState?.focus();
                   break;
               }
@@ -71,7 +76,9 @@ class _BasicDemoState extends State<BasicDemo> {
         Hello, This is a rich text Editor for Flutter. It supports most things like Bold, italics and underline.
         As well as Subscript, Superscript, Colored text, Colors bg text and hyperlink.
         Images and Videos are also supports
-        ''', // initial HTML data
+        <img src="https://lh3.googleusercontent.com/d/1MZDHszaj2_7KZ7Q6VqttSzUkIuKxC-4a" width="300" height="300" style="-webkit-text-size-adjust: 100%;">
+        ''',
+        // initial HTML data
         editorOptions: RichEditorOptions(
           placeholder: 'Start typing',
           // backgroundColor: Colors.blueGrey, // Editor's bg color

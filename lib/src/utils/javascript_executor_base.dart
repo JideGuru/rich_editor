@@ -64,8 +64,9 @@ class JavascriptExecutorBase {
   /// Display HTML data in editor
   setHtml(String html) async {
     String? baseUrl;
+    String encodedHtml = encodeHtml(html);
     await executeJavascript(
-        "setHtml(${jsonEncode(html)}, ${jsonEncode(baseUrl)});");
+        "setHtml('$encodedHtml', ${jsonEncode(baseUrl)});");
     htmlField = html;
   }
 
@@ -76,6 +77,8 @@ class JavascriptExecutorBase {
     if (decodedHtml!.startsWith('"') && decodedHtml.endsWith('"')) {
       decodedHtml = decodedHtml.substring(1, decodedHtml.length - 1);
     }
+    // Decode HTML entities like &amp; back to &
+    decodedHtml = _decodeHtmlEntities(decodedHtml);
     return decodedHtml;
   }
 
@@ -221,7 +224,7 @@ class JavascriptExecutorBase {
   insertLink(String url, String title) async {
     if (url.isEmpty) return;
     await executeJavascript(
-        "insertLink(${jsonEncode(url)}, ${jsonEncode(title)});");
+        "insertLink('${_escapeJavaScriptString(url)}', ${jsonEncode(title)});");
   }
 
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
@@ -240,7 +243,7 @@ class JavascriptExecutorBase {
     height ??= 300;
     alt ??= '';
     await executeJavascript(
-      "insertImage(${jsonEncode(url)}, ${jsonEncode(alt)}, '$width', '$height', $rotation);",
+      "insertImage('${_escapeJavaScriptString(url)}', ${jsonEncode(alt)}, '$width', '$height', $rotation);",
     );
   }
 
@@ -265,7 +268,7 @@ class JavascriptExecutorBase {
       url = 'https://www.youtube.com/embed/$youtubeId';
     }
     await executeJavascript(
-      "insertVideo(${jsonEncode(url)}, '$width', '$height', $local);",
+      "insertVideo('${_escapeJavaScriptString(url)}', '$width', '$height', $local);",
     );
   }
 
@@ -362,6 +365,29 @@ class JavascriptExecutorBase {
 
   encodeHtml(String html) {
     return Uri.encodeFull(html);
+  }
+
+  /// Escapes a string for safe use in JavaScript string literals
+  String _escapeJavaScriptString(String input) {
+    return input
+        .replaceAll('\\', '\\\\') // Escape backslashes first
+        .replaceAll("'", "\\'")   // Escape single quotes
+        .replaceAll('"', '\\"')   // Escape double quotes
+        .replaceAll('\n', '\\n')  // Escape newlines
+        .replaceAll('\r', '\\r')  // Escape carriage returns
+        .replaceAll('\t', '\\t'); // Escape tabs
+  }
+
+  /// Decodes common HTML entities back to their original characters
+  String _decodeHtmlEntities(String input) {
+    return input
+        .replaceAll('&amp;', '&')   // Decode ampersands first
+        .replaceAll('&lt;', '<')    // Decode less than
+        .replaceAll('&gt;', '>')    // Decode greater than
+        .replaceAll('&quot;', '"')  // Decode double quotes
+        .replaceAll('&#x27;', "'")  // Decode single quotes (hex)
+        .replaceAll('&#39;', "'")   // Decode single quotes (decimal)
+        .replaceAll('&nbsp;', ' '); // Decode non-breaking spaces
   }
 
 // bool shouldOverrideUrlLoading(String url) {

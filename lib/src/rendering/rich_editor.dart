@@ -103,6 +103,16 @@ class RichEditorState extends State<RichEditor> {
             Expanded(
               child: InAppWebView(
                 key: _mapKey,
+                initialSettings: InAppWebViewSettings(
+                  mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                  allowsInlineMediaPlayback: true,
+                  mediaPlaybackRequiresUserGesture: false,
+                  allowsBackForwardNavigationGestures: false,
+                  allowsLinkPreview: false,
+                  isFraudulentWebsiteWarningEnabled: false,
+                  disallowOverScroll: true,
+                  allowingReadAccessTo: WebUri.uri(Uri.parse("file://")),
+                ),
                 onWebViewCreated: (controller) async {
                   _controller = controller;
                   setState(() {});
