@@ -66,7 +66,7 @@ class JavascriptExecutorBase {
     String? baseUrl;
     String encodedHtml = encodeHtml(html);
     await executeJavascript(
-        "setHtml('$encodedHtml', ${jsonEncode(baseUrl)});");
+        "setHtml(${jsonEncode(encodedHtml)}, ${jsonEncode(baseUrl)});");
     htmlField = html;
   }
 
