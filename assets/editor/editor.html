@@ -6,6 +6,8 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <!-- the page's localhost / file URL means nothing to image hosts, and some reject it -->
         <meta name="referrer" content="no-referrer">
+        <!-- only the editor's own scripts run, never scripts or inline handlers in the content -->
+        <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'none'">
         <link rel="stylesheet" type="text/css" href="normalize.css">
         <link rel="stylesheet" type="text/css" href="style.css">
         <link rel="stylesheet" type="text/css" href="platform_style.css">

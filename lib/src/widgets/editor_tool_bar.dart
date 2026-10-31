@@ -98,8 +98,9 @@ class EditorToolBar extends StatelessWidget {
                 tooltip: labels.tooltip(item),
                 icon: _icon(item),
                 selected: _isSelected(item),
-                disabled: item == ToolbarItem.video && disableVideo,
-                onTap: () => _onTap(context, item),
+                disabled: !_canUse(item) ||
+                    (item == ToolbarItem.video && disableVideo),
+                onTap: _canUse(item) ? () => _onTap(context, item) : null,
               ),
         ],
       ),
@@ -111,6 +112,15 @@ class EditorToolBar extends StatelessWidget {
       ToolbarItem.video => enableVideo,
       // Fonts are read from the Android system font list.
       ToolbarItem.fontFace => Platform.isAndroid,
+      _ => true,
+    };
+  }
+
+  /// False while there is nothing to undo or redo.
+  bool _canUse(ToolbarItem item) {
+    return switch (item) {
+      ToolbarItem.undo => commandStates[EditorCommand.undo]?.enabled ?? true,
+      ToolbarItem.redo => commandStates[EditorCommand.redo]?.enabled ?? true,
       _ => true,
     };
   }

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -24,6 +26,10 @@ class RichEditor extends StatefulWidget {
   /// Initial HTML. Changing it replaces the editor content.
   final String? value;
   final RichEditorOptions editorOptions;
+
+  /// Uploads an image the user picked, pasted or dropped, and returns its
+  /// URL. Without it, picked images are inserted by their file path, and
+  /// pasted or dropped ones as `data:` URLs.
   final Future<String> Function(File image)? getImageUrl;
   final Future<String> Function(File video)? getVideoUrl;
   final bool disableVideo;
@@ -40,6 +46,13 @@ class RichEditor extends StatefulWidget {
   /// [RichEditorOptions.barPosition]. Ignored for [BarPosition.custom].
   final RichEditorToolbarBuilder? toolbarBuilder;
 
+  /// Shows the content without letting the user edit it, and hides the
+  /// toolbar.
+  final bool readOnly;
+
+  /// Focuses the editor, showing the keyboard, once it has loaded.
+  final bool autofocus;
+
   const RichEditor({
     super.key,
     this.controller,
@@ -52,6 +65,8 @@ class RichEditor extends StatefulWidget {
     this.onChanged,
     this.onUploadError,
     this.toolbarBuilder,
+    this.readOnly = false,
+    this.autofocus = false,
   });
 
   @override
@@ -112,6 +127,9 @@ class RichEditorState extends State<RichEditor> {
     if (widget.editorOptions != oldWidget.editorOptions) {
       _applyOptions(oldWidget.editorOptions);
     }
+    if (widget.readOnly != oldWidget.readOnly) {
+      javascriptExecutor.setInputEnabled(!widget.readOnly);
+    }
   }
 
   @override
@@ -148,7 +166,7 @@ class RichEditorState extends State<RichEditor> {
   @override
   Widget build(BuildContext context) {
     final options = widget.editorOptions;
-    final toolbar = options.barPosition == BarPosition.custom
+    final toolbar = options.barPosition == BarPosition.custom || widget.readOnly
         ? null
         : widget.toolbarBuilder?.call(context, controller) ?? _buildToolBar();
 
@@ -156,7 +174,8 @@ class RichEditorState extends State<RichEditor> {
       children: [
         Column(
           children: [
-            if (options.barPosition == BarPosition.top) toolbar!,
+            if (toolbar != null && options.barPosition == BarPosition.top)
+              toolbar,
             Expanded(
               child: InAppWebView(
                 initialSettings: InAppWebViewSettings(
@@ -179,6 +198,10 @@ class RichEditorState extends State<RichEditor> {
                     handlerName: 'editorStateChanged',
                     callback: _handleEditorStateChanged,
                   );
+                  webViewController.addJavaScriptHandler(
+                    handlerName: 'imagePasted',
+                    callback: _handlePastedImage,
+                  );
                   await _loadEditor(webViewController);
                 },
                 onLoadStop: (_, __) => _initializeEditor(),
@@ -196,7 +219,8 @@ class RichEditorState extends State<RichEditor> {
                     : null,
               ),
             ),
-            if (options.barPosition == BarPosition.bottom) toolbar!,
+            if (toolbar != null && options.barPosition == BarPosition.bottom)
+              toolbar,
           ],
         ),
         // Media upload loading overlay
@@ -316,6 +340,11 @@ class RichEditorState extends State<RichEditor> {
       final html = pendingHtml ?? widget.value;
       if (html != null) await controller.executor.setHtml(html);
       await _applyOptions();
+      if (widget.readOnly) {
+        await controller.executor.setInputEnabled(false);
+      } else if (widget.autofocus) {
+        await controller.focus();
+      }
       if (mounted) setState(() => _isWebViewLoaded = true);
     } finally {
       _isInitializing = false;
@@ -346,6 +375,48 @@ class RichEditorState extends State<RichEditor> {
         html != previousHtml &&
         data['fromApplication'] != true) {
       widget.onChanged?.call(html);
+    }
+  }
+
+  /// Inserts an image the user pasted or dropped into the editor, uploading
+  /// it with [RichEditor.getImageUrl] if given.
+  Future<void> _handlePastedImage(List<dynamic> arguments) async {
+    final data = arguments.isEmpty ? null : arguments.first;
+    if (data is! Map) return;
+    final base64Data = data['data'];
+    final type = data['type'];
+    if (base64Data is! String || type is! String) return;
+
+    var url = 'data:$type;base64,$base64Data';
+    if (widget.getImageUrl != null) {
+      Directory? directory;
+      try {
+        directory = await Directory.systemTemp.createTemp('rich_editor');
+        final extension =
+            type.split('/').last.replaceAll(RegExp('[^a-z0-9]'), '');
+        final file = File('${directory.path}/pasted_image.$extension');
+        await file.writeAsBytes(base64Decode(base64Data));
+        url = await uploadImageWithLoader(file);
+      } catch (error, stackTrace) {
+        _reportUploadError(error, stackTrace);
+        return;
+      } finally {
+        directory?.delete(recursive: true).ignore();
+      }
+    }
+
+    // Shown at most 300 pixels wide, like picked images, without distortion.
+    final width = data['width'];
+    final height = data['height'];
+    if (width is num && height is num && width > 0 && height > 0) {
+      final scale = math.min(1, 300 / width);
+      await javascriptExecutor.insertImage(
+        url,
+        width: (width * scale).round(),
+        height: (height * scale).round(),
+      );
+    } else {
+      await javascriptExecutor.insertImage(url);
     }
   }
 

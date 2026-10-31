@@ -22,14 +22,15 @@ Supports **Android** and **iOS**. The editor runs in a WebView
 - [x] Undo, Redo
 - [x] Unordered List (Bullets)
 - [x] Ordered List (Numbers)
-- [x] Insert local or remote Image
+- [x] Insert local or remote Image, or paste one
 - [x] Insert video (YouTube links or video files)
 - [x] Insert Link
 - [x] Insert Checkbox
 - [x] Toolbar highlights active formatting
 - [x] Change notifications (`onChanged`) and a controller
 - [x] Customizable and localizable toolbar
-- [x] Pasted HTML is sanitized
+- [x] Read-only mode
+- [x] Pasted HTML is sanitized, and a Content-Security-Policy blocks scripts in the content
 - [ ] Search
 
 ## 📸 Screenshots
@@ -58,8 +59,8 @@ RichEditor(
   ),
   // Called with the new HTML whenever the user edits
   onChanged: (html) => print(html),
-  // Return a link for a picked image: upload it to your storage first,
-  // or use a data URI.
+  // Return a link for a picked, pasted or dropped image: upload it to your
+  // storage first, or use a data URI.
   getImageUrl: (image) async {
     final base64 = base64Encode(await image.readAsBytes());
     return 'data:image/png;base64,$base64';
@@ -69,6 +70,10 @@ RichEditor(
 ```
 
 Dispose the controller when you're done with it.
+
+Set `readOnly: true` to show the content without the toolbar and without
+letting the user edit it, and `autofocus: true` to focus the editor and show
+the keyboard once it has loaded.
 
 Get or set the HTML
 
@@ -144,6 +149,15 @@ library usage description in `Info.plist`).
 On iOS the editor is served from `http://localhost` inside your app. If
 App Transport Security blocks it, set `NSAllowsLocalNetworking` to `true`
 under `NSAppTransportSecurity` in `Info.plist`.
+
+## Development
+
+```bash
+flutter test                       # the Dart package
+(cd test/js && npm ci && npm test) # the editor JavaScript, in jsdom
+```
+
+CI runs both, plus `dart format` and `flutter analyze`, on every pull request.
 
 ## License
 

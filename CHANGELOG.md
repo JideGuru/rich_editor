@@ -12,6 +12,13 @@
 * `RichEditor.onUploadError` is called when `getImageUrl` / `getVideoUrl` throws;
   nothing is inserted then.
 * The placeholder is shown while the editor is empty.
+* `RichEditor.readOnly` shows the content without the toolbar and without letting
+  the user edit it; `RichEditor.autofocus` focuses the editor once it has loaded.
+* Pasted and dropped images are uploaded with `getImageUrl` (or inserted as `data:`
+  URLs without it), at the caret and without distortion.
+* Undo and Redo are greyed out when there is nothing to undo or redo.
+* The editor page has a Content-Security-Policy that only runs the editor's own
+  scripts, so scripts and inline handlers in the content never run.
 * Colors keep their transparency; the color picker opens at the color under the cursor
   and has a Cancel button.
 
@@ -43,6 +50,9 @@
   when its port was taken, used a fixed port shared by all editors, and served every app asset.
   It now uses a free port and only serves the editor files.
 * Changing `value` or `editorOptions` after the first build had no effect.
+* Typing in large documents sent the whole HTML to Flutter on every keystroke and
+  selection change; reports are now batched (at most every 50 ms, less often for
+  large documents).
 * `setState` after dispose when an upload finished late.
 * Dialog text fields leaked their controllers.
 * The editor no longer forces mixed content on, and only logs WebView console

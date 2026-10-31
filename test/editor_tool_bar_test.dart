@@ -70,6 +70,29 @@ void main() {
     });
   });
 
+  testWidgets('greys out undo and redo while there is nothing to undo',
+      (tester) async {
+    await tester.pumpWidget(_app(EditorToolBar(
+      javascriptExecutor: executor,
+      isWebViewLoaded: true,
+      items: const [ToolbarItem.undo, ToolbarItem.redo],
+      commandStates: const {
+        EditorCommand.undo: CommandState(enabled: false),
+        EditorCommand.redo: CommandState(enabled: true),
+      },
+    )));
+
+    final disabled = {
+      for (final b in tester.widgetList<TabButton>(find.byType(TabButton)))
+        b.tooltip: b.disabled,
+    };
+    expect(disabled, {'Undo': true, 'Redo': false});
+
+    await tester.tap(find.byIcon(Icons.undo));
+    await tester.tap(find.byIcon(Icons.redo));
+    expect(executor.commands, ['redo();']);
+  });
+
   testWidgets('uses custom labels', (tester) async {
     await tester.pumpWidget(_app(EditorToolBar(
       javascriptExecutor: executor,

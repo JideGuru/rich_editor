@@ -52,6 +52,9 @@ var editor = {
     _lastReportedHtml: null,
     _lastReportedCommandStates: null,
 
+    // pending _updateEditorState() for typing and selecting, see _scheduleEditorStateUpdate()
+    _editorStateUpdateTimer: null,
+
     _imageMinWidth: 100,
     _imageMinHeight: 50,
 
@@ -86,6 +89,7 @@ var editor = {
         });
 
         this._textField.addEventListener("paste", function(e) { editor._handlePaste(e); });
+        this._textField.addEventListener("drop", function(e) { editor._handleDrop(e); });
 
         // Checkboxes are handled here rather than with inline onclick attributes, so saved HTML carries no script.
         this._textField.addEventListener("click", function(e) {
@@ -206,7 +210,7 @@ var editor = {
             this._ensureEditorInsertsParagraphWhenPressingEnter();
         }
 
-        this._updateEditorState();
+        this._scheduleEditorStateUpdate();
     },
 
     // Whether element holds no text (ignoring the zero width space placeholder) and no media.
@@ -228,7 +232,12 @@ var editor = {
 
         var pastedHtml = clipboardData.getData('text/html');
         var pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
-        if(!pastedHtml && !pastedText) { // e.g. a pasted image file; the browser inserts that itself
+        if(!pastedHtml && !pastedText) { // e.g. a pasted screenshot
+            var images = this._imageFiles(clipboardData.files);
+            if(images.length > 0) {
+                event.preventDefault();
+                this._sendImagesToFlutter(images);
+            }
             return;
         }
 
@@ -240,6 +249,53 @@ var editor = {
         else {
             this._insertHtml(this._escapeHtml(pastedText).replace(/\r\n|\r|\n/g, '<br>'));
         }
+    },
+
+    _handleDrop: function(event) {
+        var images = this._imageFiles(event.dataTransfer && event.dataTransfer.files);
+        if(images.length == 0) {
+            return;
+        }
+
+        event.preventDefault();
+        if(document.caretRangeFromPoint) { // insert the images where they were dropped
+            var range = document.caretRangeFromPoint(event.clientX, event.clientY);
+            if(range) {
+                var selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                this._backupRange();
+            }
+        }
+        this._sendImagesToFlutter(images);
+    },
+
+    _imageFiles: function(files) {
+        return Array.prototype.filter.call(files || [], function(file) {
+            return /^image\//.test(file.type);
+        });
+    },
+
+    // Flutter uploads the images with getImageUrl, if given, and inserts them at the caret.
+    _sendImagesToFlutter: function(images) {
+        images.forEach(function(file) {
+            var reader = new FileReader();
+            reader.onload = function() {
+                var dataUrl = reader.result;
+                var image = new Image();
+                image.onload = image.onerror = function() {
+                    editor._sendToFlutter('imagePasted', {
+                        'name': file.name,
+                        'type': file.type,
+                        'data': dataUrl.substring(dataUrl.indexOf(',') + 1),
+                        'width': image.naturalWidth,
+                        'height': image.naturalHeight
+                    });
+                };
+                image.src = dataUrl;
+            };
+            reader.readAsDataURL(file);
+        });
     },
 
 
@@ -856,6 +912,7 @@ var editor = {
         }
         else {
             this.disableImageResizing();
+            this.blurFocus(); // hides the keyboard
         }
     },
 
@@ -887,9 +944,25 @@ var editor = {
     },
 
 
+    // Typing and selecting fire many events in a row, and each report serializes the whole document,
+    // so these are reported at most every 50 ms, less often for large documents.
+    _scheduleEditorStateUpdate: function() {
+        this._updatePlaceholder();
+        if(this._editorStateUpdateTimer != null) {
+            return;
+        }
+
+        var htmlLength = this._lastReportedHtml ? this._lastReportedHtml.length : 0;
+        var delay = Math.min(50 + htmlLength / 1000, 1000); // e.g. 150 ms for 100 kB of HTML
+
+        this._editorStateUpdateTimer = setTimeout(function() { editor._updateEditorState(); }, delay);
+    },
+
     // Reports content and command states to Flutter when they changed.
     // fromApplication marks changes the application made itself, e.g. with setHtml().
     _updateEditorState: function(fromApplication) {
+        clearTimeout(this._editorStateUpdateTimer);
+        this._editorStateUpdateTimer = null;
         this._updatePlaceholder();
 
         var html = this._getHtmlWithoutInternalModifications();
