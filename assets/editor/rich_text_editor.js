@@ -944,6 +944,9 @@ var editor = {
 
     setBackgroundColor: function(color) {
         document.body.style.backgroundColor = color;
+        // on the editable element too: otherwise Chromium copies the color into a style
+        // attribute on content inserted at the end of a paragraph (links, images, ...)
+        this._textField.style.backgroundColor = color;
     },
 
     // 'light' or 'dark': the colors of links, checkboxes, the caret and selections.

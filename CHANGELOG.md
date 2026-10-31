@@ -31,6 +31,10 @@
 ### Fixed
 * On iOS, inserted links, images and the text around them no longer get a
   `style="-webkit-text-size-adjust: 100%;"` attribute in the HTML.
+* On Android, links and images inserted at the end of a paragraph no longer get the
+  editor's background color as a `style` attribute in the HTML.
+* The Quote button removes the quote when the caret is in one, instead of nesting
+  another quote inside it.
 * Text containing `+` (e.g. "C++") lost characters when set with `setHtml`.
 * `getHtml` no longer decodes HTML entities, which turned typed text like `<b>` into real markup.
 * Strings with quotes or backslashes (fonts, placeholder, checkbox text, `insertHtml`, ...)

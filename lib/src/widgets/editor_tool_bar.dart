@@ -216,7 +216,12 @@ class EditorToolBar extends StatelessWidget {
       case ToolbarItem.redo:
         await executor.redo();
       case ToolbarItem.blockquote:
-        await executor.setBlockQuote();
+        // a toggle: applying it again would nest another quote
+        if (_isSelected(ToolbarItem.blockquote)) {
+          await executor.setFormattingToParagraph();
+        } else {
+          await executor.setBlockQuote();
+        }
       case ToolbarItem.textFormat:
         final format = await showDialog<BlockFormat>(
           context: context,

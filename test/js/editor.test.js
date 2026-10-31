@@ -380,6 +380,14 @@ describe('links', () => {
   });
 });
 
+describe('background color', () => {
+  it('is set on the editable element too, so Chromium does not copy it into inserted content', () => {
+    e.editor.setBackgroundColor('rgb(17, 20, 24)');
+    assert.equal(e.window.document.body.style.backgroundColor, 'rgb(17, 20, 24)');
+    assert.equal(e.window.editor._textField.style.backgroundColor, 'rgb(17, 20, 24)');
+  });
+});
+
 describe('text', () => {
   it('is the content without markup or zero width spaces', () => {
     // jsdom has no layout, so no innerText

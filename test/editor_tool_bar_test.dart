@@ -70,6 +70,27 @@ void main() {
     });
   });
 
+  testWidgets('the quote button toggles the quote', (tester) async {
+    Future<void> tapQuote(String blockFormat) async {
+      await tester.pumpWidget(_app(EditorToolBar(
+        javascriptExecutor: executor,
+        isWebViewLoaded: true,
+        items: const [ToolbarItem.blockquote],
+        commandStates: {
+          EditorCommand.formatBlock: CommandState(value: blockFormat),
+        },
+      )));
+      await tester.tap(find.byIcon(Icons.format_quote));
+    }
+
+    await tapQuote('p');
+    await tapQuote('blockquote');
+    expect(executor.commands, [
+      'setBlockQuote();',
+      'setFormattingToParagraph();',
+    ]);
+  });
+
   testWidgets('greys out undo and redo while there is nothing to undo',
       (tester) async {
     await tester.pumpWidget(_app(EditorToolBar(
