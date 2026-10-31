@@ -1,17 +1,16 @@
-# Basic analysis options for the rich_editor package
-# Focuses on essential lints without being overly strict
-
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
   exclude:
-    - "**/*.g.dart"
-    - "**/*.freezed.dart"
-    - "**/*.mocks.dart"
-    - "**/generated_plugin_registrant.dart"
     - "build/**"
     - "example/build/**"
-    - "example/ios/**"
-    - "example/android/**"
-    - "example/macos/**"
-    - "example/web/**"
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - prefer_final_fields
+    - unawaited_futures

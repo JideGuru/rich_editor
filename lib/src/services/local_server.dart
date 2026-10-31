@@ -3,138 +3,79 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:mime/mime.dart';
 
 /*
  * credit thanks to https://github.com/shah-xad/flutter_tex/blob/master/lib/src/utils/tex_view_server.dart
  */
 
+/// Serves the editor's web assets to the WebView over http://localhost.
+///
+/// Only files under [assetDirectory] are served, on a port picked by the
+/// system, so several editors can run at once.
 class LocalServer {
-  HttpServer? server;
-  final int port;
+  LocalServer({this.assetDirectory = 'packages/rich_editor/assets/editor/'});
 
-  LocalServer(this.port);
+  final String assetDirectory;
+  HttpServer? _server;
+  Future<int>? _starting;
+
+  static const _contentTypes = {
+    'html': 'text/html',
+    'css': 'text/css',
+    'js': 'text/javascript',
+    'png': 'image/png',
+    'svg': 'image/svg+xml',
+  };
+
+  /// The port being listened on, once [start] completed.
+  int? get port => _server?.port;
+
+  ///Starts the server and returns its port
+  Future<int> start() {
+    return _starting ??= () async {
+      final server = await HttpServer.bind('localhost', 0);
+      _server = server;
+      server.listen(
+        _handleRequest,
+        onError: (Object e, StackTrace s) =>
+            debugPrint('LocalServer error: $e'),
+      );
+      return server.port;
+    }();
+  }
 
   ///Closes the server.
   Future<void> close() async {
-    if (server != null) {
-      await server?.close(force: true);
-      server = null;
-    }
+    final server = _server;
+    _server = null;
+    _starting = null;
+    await server?.close(force: true);
   }
 
-  ///Starts the server
-  Future<void> start(Function(HttpRequest request) request) async {
-    if (server != null) {
-      throw Exception('Server already started on http://localhost:$port');
+  Future<void> _handleRequest(HttpRequest request) async {
+    final response = request.response;
+    final segments = request.uri.pathSegments;
+    final path = segments.join('/');
+
+    if (request.method != 'GET' ||
+        segments.contains('..') ||
+        !path.startsWith(assetDirectory)) {
+      response.statusCode = HttpStatus.notFound;
+      await response.close();
+      return;
     }
 
-    var completer = Completer();
-    runZonedGuarded(
-      () {
-        HttpServer.bind('localhost', port, shared: true).then((server) {
-          this.server = server;
-
-          server.listen((HttpRequest httpRequest) async {
-            request(httpRequest);
-            var body = <int>[];
-            var path = httpRequest.requestedUri.path;
-            path = (path.startsWith('/')) ? path.substring(1) : path;
-            path += (path.endsWith('/')) ? 'index.html' : '';
-
-            try {
-              body = (await rootBundle.load(path)).buffer.asUint8List();
-            } catch (e) {
-              debugPrint('Failed to load asset: ${e.toString()}');
-              httpRequest.response.close();
-              return;
-            }
-
-            var contentType = ['text', 'html'];
-            if (!httpRequest.requestedUri.path.endsWith('/') &&
-                httpRequest.requestedUri.pathSegments.isNotEmpty) {
-              var mimeType = lookupMimeType(httpRequest.requestedUri.path,
-                  headerBytes: body);
-              if (mimeType != null) {
-                contentType = mimeType.split('/');
-              }
-            }
-
-            httpRequest.response.headers.contentType =
-                ContentType(contentType[0], contentType[1], charset: 'utf-8');
-            httpRequest.response.add(body);
-            httpRequest.response.close();
-          });
-          completer.complete();
-        });
-      },
-      (e, stackTrace) => debugPrint('LocalServer error: $e $stackTrace'),
-    );
-    return completer.future;
-  }
-}
-
-class WebSocketServer {
-  HttpServer? server;
-
-  final int port;
-
-  WebSocketServer(this.port);
-
-  ///Closes the server.
-  Future<void> close() async {
-    if (server != null) {
-      await server?.close(force: true);
-      server = null;
+    try {
+      final data = await rootBundle.load(path);
+      final extension = path.substring(path.lastIndexOf('.') + 1);
+      response.headers.contentType = ContentType.parse(
+          '${_contentTypes[extension] ?? 'application/octet-stream'}; charset=utf-8');
+      response
+          .add(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
+    } catch (e) {
+      debugPrint('Failed to load asset $path: $e');
+      response.statusCode = HttpStatus.notFound;
     }
-  }
-
-  ///Starts the server
-  Future<void> start() async {
-    if (server != null) {
-      throw Exception('Server already started on http://localhost:$port');
-    }
-    var completer = Completer();
-    runZonedGuarded(
-      () {
-        HttpServer.bind('localhost', port, shared: true).then(
-            (HttpServer server) {
-          debugPrint('WebSocket listening at ws://localhost:$port/');
-          this.server = server;
-          server.listen((HttpRequest request) {
-            WebSocketTransformer.upgrade(request).then((WebSocket ws) {
-              ws.listen(
-                (data) {
-                  debugPrint(
-                      'WebSocket data from ${request.connectionInfo?.remoteAddress}: ${data.toString()}');
-                  Timer(const Duration(seconds: 1), () {
-                    if (ws.readyState == WebSocket.open) {
-                      // checking connection state helps to avoid unprecedented errors
-                      ws.add("ping");
-                    }
-                  });
-                },
-                onDone: () => debugPrint('WebSocket connection closed'),
-                onError: (err) =>
-                    debugPrint('WebSocket listen error: ${err.toString()}'),
-                cancelOnError: true,
-              );
-              // request.response.close();
-            },
-                onError: (err) =>
-                    debugPrint('WebSocket upgrade error: ${err.toString()}'));
-          },
-              onError: (err) =>
-                  debugPrint('Server listen error: ${err.toString()}'));
-          completer.complete();
-        },
-            onError: (err) =>
-                debugPrint('Server bind error: ${err.toString()}'));
-      },
-      (err, stacktrace) =>
-          debugPrint('WebSocketServer error: ${err.toString()}'),
-    );
-
-    return completer.future;
+    await response.close();
   }
 }

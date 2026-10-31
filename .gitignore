@@ -79,3 +79,6 @@ build/
 .notes
 .DS_Store
 .idea
+
+# Libraries should not pin their dependencies
+/pubspec.lock

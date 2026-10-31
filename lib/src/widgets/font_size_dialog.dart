@@ -1,38 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:rich_editor/src/models/rich_editor_labels.dart';
 
-import 'html_text.dart';
+/// Lets the user pick a font size from 1 to 7; pops with it or null.
+class FontSizeDialog extends StatelessWidget {
+  final RichEditorLabels labels;
 
-class FontSizeDialog extends StatefulWidget {
-  const FontSizeDialog({super.key});
+  const FontSizeDialog({super.key, this.labels = const RichEditorLabels()});
 
-  @override
-  State<FontSizeDialog> createState() => _FontSizeDialogState();
-}
-
-class _FontSizeDialogState extends State<FontSizeDialog> {
-  final List formats = [
-    {'id': '1', 'title': '<small><small><small>Teeny</small></small></small>'},
-    {'id': '2', 'title': '<small><small>Very small</small></small>'},
-    {'id': '3', 'title': '<small>Small</small>'},
-    {'id': '4', 'title': 'Medium'},
-    {'id': '5', 'title': '<big>Large</big>'},
-    {'id': '6', 'title': '<big><big>Very large</big></big>'},
-    {'id': '7', 'title': '<big><big><big>Huge</big></big></big>'},
-  ];
+  // Roughly the sizes the editor renders for font sizes 1 to 7.
+  static const _previewSizes = [10.0, 13.0, 16.0, 18.0, 24.0, 32.0, 48.0];
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      contentPadding: const EdgeInsets.symmetric(vertical: 16),
       content: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (Map format in formats)
-              InkWell(
-                child: HtmlText(html: format['title']),
-                onTap: () => Navigator.pop(context, format['id']),
-              )
+            for (var size = 1; size <= 7; size++)
+              ListTile(
+                title: Text(
+                  labels.fontSizes[size - 1],
+                  style: TextStyle(fontSize: _previewSizes[size - 1]),
+                ),
+                onTap: () => Navigator.pop(context, size),
+              ),
           ],
         ),
       ),

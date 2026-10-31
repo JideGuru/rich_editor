@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:rich_editor/rich_editor.dart';
 
@@ -11,94 +9,73 @@ class CustomToolbarDemo extends StatefulWidget {
 }
 
 class _CustomToolbarDemoState extends State<CustomToolbarDemo> {
-  GlobalKey<RichEditorState> keyEditor = GlobalKey();
+  final _controller = RichEditorController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final executor = _controller.executor;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Custom Toolbar Demo'),
         actions: [
-          PopupMenuButton(
-            child: const IconButton(
-              icon: Icon(Icons.more_vert),
-              onPressed: null,
-              disabledColor: Colors.white,
-            ),
-            itemBuilder: (context) {
-              return [
-                const PopupMenuItem(
-                  value: 0,
-                  child: Text('Get HTML'),
-                ),
-                const PopupMenuItem(
-                  value: 1,
-                  child: Text('Clear content'),
-                ),
-                const PopupMenuItem(
-                  value: 2,
-                  child: Text('Hide keyboard'),
-                ),
-                const PopupMenuItem(
-                  value: 3,
-                  child: Text('Show Keyboard'),
-                ),
-              ];
-            },
-            onSelected: (val) async {
-              switch (val) {
-                case 0:
-                  String? html = await keyEditor.currentState?.getHtml();
-                  debugPrint('Current HTML: $html');
-                  break;
-                case 1:
-                  await keyEditor.currentState?.clear();
-                  break;
-                case 2:
-                  await keyEditor.currentState?.unFocus();
-                  break;
-                case 3:
-                  await keyEditor.currentState?.focus();
-                  break;
-              }
-            },
+          IconButton(
+            tooltip: 'Print HTML',
+            icon: const Icon(Icons.code),
+            onPressed: () async =>
+                debugPrint('Current HTML: ${await _controller.getHtml()}'),
+          ),
+          IconButton(
+            tooltip: 'Clear',
+            icon: const Icon(Icons.clear_all),
+            onPressed: _controller.clear,
           ),
         ],
       ),
       body: Column(
         children: [
-          Wrap(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.format_bold),
-                onPressed: () {
-                  keyEditor.currentState!.javascriptExecutor.setBold();
-                },
-              ),
-            ],
+          // Rebuilds as the cursor moves, so buttons reflect the formatting
+          // at the cursor.
+          ValueListenableBuilder<RichEditorValue>(
+            valueListenable: _controller,
+            builder: (context, value, _) => Wrap(
+              children: [
+                TabButton(
+                  tooltip: 'Bold',
+                  icon: Icons.format_bold,
+                  selected: value.isActive(EditorCommand.bold),
+                  onTap: executor.setBold,
+                ),
+                TabButton(
+                  tooltip: 'Italic',
+                  icon: Icons.format_italic,
+                  selected: value.isActive(EditorCommand.italic),
+                  onTap: executor.setItalic,
+                ),
+                TabButton(
+                  tooltip: 'Heading',
+                  icon: Icons.title,
+                  selected: value.valueOf(EditorCommand.formatBlock) == 'h2',
+                  onTap: () => executor.setHeading(2),
+                ),
+              ],
+            ),
           ),
           Expanded(
             child: RichEditor(
-              key: keyEditor,
-//         value: '', // initial HTML data
-              editorOptions: RichEditorOptions(
+              controller: _controller,
+              editorOptions: const RichEditorOptions(
                 placeholder: 'Start typing',
-                // backgroundColor: Colors.blueGrey, // Editor's bg color
-                // baseTextColor: Colors.white,
-                // editor padding
-                padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                // font name
+                padding: EdgeInsets.symmetric(horizontal: 5.0),
                 baseFontFamily: 'sans-serif',
-                // Position of the editing bar (BarPosition.top or BarPosition.bottom)
+                // The built-in toolbar is replaced by the one above.
                 barPosition: BarPosition.custom,
               ),
-
-              // You can return a Link (maybe you need to upload the image to your
-              // storage before displaying in the editor or you can also use base64
-              getImageUrl: (image) {
-                String base64 = base64Encode(image.readAsBytesSync());
-                String base64String = 'data:image/png;base64, $base64';
-                return Future<String>.value(base64String);
-              },
             ),
           ),
         ],

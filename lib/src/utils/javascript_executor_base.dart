@@ -4,232 +4,216 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
-import 'package:rich_editor/src/models/callbacks/did_html_change_listener.dart';
-import 'package:rich_editor/src/models/callbacks/html_changed_listener.dart';
-import 'package:rich_editor/src/models/callbacks/loaded_listener.dart';
-import 'package:rich_editor/src/models/enum/command_name.dart';
-
-import '../models/command_state.dart';
+import 'package:rich_editor/src/utils/video_url.dart';
 
 /// A class that handles all editor-related javascript functions
+///
+/// Every argument is passed through [jsonEncode], so any string reaches the
+/// editor unchanged.
 class JavascriptExecutorBase {
   InAppWebViewController? _controller;
 
-  String defaultHtml = "<p>\u200B</p>";
-
-  String editorStateChangedCallbackScheme = "editor-state-changed-callback://";
-
-  String defaultEncoding = "UTF-8";
-
-  String? htmlField = "";
-
-  var didHtmlChange = false;
-
-  Map<CommandName, CommandState> commandStates = {};
-
-  List<Map<CommandName, CommandState>> commandStatesChangedListeners =
-      <Map<CommandName, CommandState>>[];
-
-  List<DidHtmlChangeListener> didHtmlChangeListeners =
-      <DidHtmlChangeListener>[];
-
-  List<HtmlChangedListener> htmlChangedListeners = <HtmlChangedListener>[];
-
-  // protected val fireHtmlChangedListenersQueue = AsyncProducerConsumerQueue<String>(1) { html ->
-  // fireHtmlChangedListeners(html)
-  // }
-
-  bool isLoaded = false;
-
-  List<LoadedListener> loadedListeners = <LoadedListener>[];
+  /// Whether the editor page is loaded and accepting commands.
+  bool get isReady => _controller != null;
 
   /// Initialise the controller so we don't have to
   /// pass a controller into every Method
-  init(InAppWebViewController? controller) {
+  void init(InAppWebViewController? controller) {
     _controller = controller;
   }
 
   /// Run Javascript commands in the editor using the webview controller
-  executeJavascript(String command) async {
-    if (_controller == null) {
-      return null; // Silently return if controller is not ready
-    }
-    return await _controller!.evaluateJavascript(source: 'editor.$command');
-  }
-
-  String getCachedHtml() {
-    return htmlField!;
+  ///
+  /// Does nothing and returns null until the editor is loaded.
+  Future<Object?> executeJavascript(String command) async {
+    final controller = _controller;
+    if (controller == null) return null;
+    return await controller.evaluateJavascript(source: 'editor.$command')
+        as Object?;
   }
 
   /// Display HTML data in editor
-  setHtml(String html) async {
-    String? baseUrl;
-    String encodedHtml = encodeHtml(html);
-    await executeJavascript(
-        "setHtml(${jsonEncode(encodedHtml)}, ${jsonEncode(baseUrl)});");
-    htmlField = html;
+  Future<void> setHtml(String html) async {
+    await executeJavascript("setHtml(${jsonEncode(html)});");
   }
 
   /// Get current HTML data from Editor
-  getCurrentHtml() async {
-    String? html = await executeJavascript('getEncodedHtml();');
-    String? decodedHtml = decodeHtml(html!);
-    if (decodedHtml!.startsWith('"') && decodedHtml.endsWith('"')) {
-      decodedHtml = decodedHtml.substring(1, decodedHtml.length - 1);
+  ///
+  /// The editor percent-encodes its HTML so it crosses the WebView bridge as
+  /// plain ASCII; it is returned exactly as the editor holds it, entities
+  /// included. Returns an empty string while the editor is empty or not
+  /// loaded yet.
+  Future<String> getCurrentHtml() async {
+    String? html = (await executeJavascript('getEncodedHtml();'))?.toString();
+    if (html == null) return '';
+    // Some platforms hand back the JS string still wrapped in quotes.
+    // encodeURIComponent never emits a quote, so stripping them is safe.
+    if (html.length >= 2 && html.startsWith('"') && html.endsWith('"')) {
+      html = html.substring(1, html.length - 1);
     }
-    // Decode HTML entities like &amp; back to &
-    decodedHtml = _decodeHtmlEntities(decodedHtml);
-    return decodedHtml;
+    return Uri.decodeComponent(html);
   }
 
-  /// Check if editor's content has been modified
-  bool isDefaultRichTextEditorHtml(String html) {
-    return defaultHtml == html;
+  /// Whether the editor holds no text and no media.
+  Future<bool> isEmpty() async {
+    final result = await executeJavascript('isEmpty();');
+    return result == null || result == true || result.toString() == 'true';
   }
+
+  /// Remove all content from the editor
+  Future<void> clear() => setHtml('');
 
   // Text commands
 
   /// Undo last editor command/action
-  undo() async {
+  Future<void> undo() async {
     await executeJavascript("undo();");
   }
 
   /// Redo last editor command/action
-  redo() async {
+  Future<void> redo() async {
     await executeJavascript("redo();");
   }
 
   /// Make selected or subsequent text Bold
-  setBold() async {
+  Future<void> setBold() async {
     await executeJavascript("setBold();");
   }
 
   /// Make selected or subsequent text Italic
-  setItalic() async {
+  Future<void> setItalic() async {
     await executeJavascript("setItalic();");
   }
 
   /// Make selected or subsequent text Underlined
-  setUnderline() async {
+  Future<void> setUnderline() async {
     await executeJavascript("setUnderline();");
   }
 
   /// Make selected or subsequent text Subscript
-  setSubscript() async {
+  Future<void> setSubscript() async {
     await executeJavascript("setSubscript();");
   }
 
   /// Make selected or subsequent text Superscript
-  setSuperscript() async {
+  Future<void> setSuperscript() async {
     await executeJavascript("setSuperscript();");
   }
 
   /// Strike through selected text
-  setStrikeThrough() async {
+  Future<void> setStrikeThrough() async {
     await executeJavascript("setStrikeThrough();");
   }
 
   /// Set a [Color] for the selected text
-  setTextColor(Color? color) async {
-    String? hex = color!.toHexColorString();
-    await executeJavascript("setTextColor('$hex');");
+  Future<void> setTextColor(Color color) async {
+    await executeJavascript(
+        "setTextColor(${jsonEncode(color.toCssColorString())});");
   }
 
   /// Set a [Color] for the selected text's background
-  setTextBackgroundColor(Color? color) async {
-    String? hex = color!.toHexColorString();
-    await executeJavascript("setTextBackgroundColor('$hex');");
+  ///
+  /// A fully transparent color removes the background.
+  Future<void> setTextBackgroundColor(Color color) async {
+    await executeJavascript(
+        "setTextBackgroundColor(${jsonEncode(color.toCssColorString())});");
   }
 
   /// Apply a font face to selected text
-  setFontName(String fontName) async {
-    await executeJavascript("setFontName('$fontName');");
+  Future<void> setFontName(String fontName) async {
+    await executeJavascript("setFontName(${jsonEncode(fontName)});");
   }
 
   /// Apply a font size to selected text
   /// (Value can only be between 1 and 7)
-  setFontSize(int fontSize) async {
+  Future<void> setFontSize(int fontSize) async {
     if (fontSize < 1 || fontSize > 7) {
-      throw ("Font size should have a value between 1-7");
+      throw ArgumentError.value(
+          fontSize, 'fontSize', 'must be between 1 and 7');
     }
-    await executeJavascript("setFontSize('$fontSize');");
+    await executeJavascript("setFontSize($fontSize);");
   }
 
   /// Apply a Heading style to selected text
   /// (Value can only be between 1 and 6)
-  setHeading(int heading) async {
-    await executeJavascript("setHeading('$heading');");
+  Future<void> setHeading(int heading) async {
+    if (heading < 1 || heading > 6) {
+      throw ArgumentError.value(heading, 'heading', 'must be between 1 and 6');
+    }
+    await executeJavascript("setHeading($heading);");
   }
 
-  setFormattingToParagraph() async {
+  Future<void> setFormattingToParagraph() async {
     await executeJavascript("setFormattingToParagraph();");
   }
 
-  setPreformat() async {
+  Future<void> setPreformat() async {
     await executeJavascript("setPreformat();");
   }
 
   /// Create BlockQuote / make selected text a BlockQuote
-  setBlockQuote() async {
+  Future<void> setBlockQuote() async {
     await executeJavascript("setBlockQuote();");
   }
 
   /// Remove formatting from selected text
-  removeFormat() async {
+  Future<void> removeFormat() async {
     await executeJavascript("removeFormat();");
   }
 
   /// Align content left
-  setJustifyLeft() async {
+  Future<void> setJustifyLeft() async {
     await executeJavascript("setJustifyLeft();");
   }
 
   /// Align content center
-  setJustifyCenter() async {
+  Future<void> setJustifyCenter() async {
     await executeJavascript("setJustifyCenter();");
   }
 
   /// Align content right
-  setJustifyRight() async {
+  Future<void> setJustifyRight() async {
     await executeJavascript("setJustifyRight();");
   }
 
   /// Justify content
-  setJustifyFull() async {
+  Future<void> setJustifyFull() async {
     await executeJavascript("setJustifyFull();");
   }
 
   /// Add indentation
-  setIndent() async {
+  Future<void> setIndent() async {
     await executeJavascript("setIndent();");
   }
 
   /// Remove indentation
-  setOutdent() async {
+  Future<void> setOutdent() async {
     await executeJavascript("setOutdent();");
   }
 
   /// Start an unordered list
-  insertBulletList() async {
+  Future<void> insertBulletList() async {
     await executeJavascript("insertBulletList();");
   }
 
   /// Start a ordered list
-  insertNumberedList() async {
+  Future<void> insertNumberedList() async {
     await executeJavascript("insertNumberedList();");
   }
 
   // Insert element
   /// Insert hyper link / make selected text an hyperlink
-  insertLink(String url, String title) async {
+  ///
+  /// Unsafe URLs such as `javascript:` are ignored by the editor.
+  Future<void> insertLink(String url, String title) async {
     if (url.isEmpty) return;
     await executeJavascript(
-        "insertLink('${_escapeJavaScriptString(url)}', ${jsonEncode(title)});");
+        "insertLink(${jsonEncode(url)}, ${jsonEncode(title)});");
   }
 
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
   /// Rotation can be one of the following values: 0, 90, 180, 270.
-  insertImage(
+  Future<void> insertImage(
     String url, {
     String? alt,
     int? width,
@@ -243,13 +227,16 @@ class JavascriptExecutorBase {
     height ??= 300;
     alt ??= '';
     await executeJavascript(
-      "insertImage('${_escapeJavaScriptString(url)}', ${jsonEncode(alt)}, '$width', '$height', $rotation);",
+      "insertImage(${jsonEncode(url)}, ${jsonEncode(alt)}, $width, $height, $rotation);",
     );
   }
 
   /// Insert video from Youtube or Device
-  /// might work with dailymotion but i've not tested that
-  insertVideo(
+  ///
+  /// YouTube links (watch, youtu.be, shorts, ...) are always embedded with
+  /// the YouTube player. Other links are played in a `<video>` element when
+  /// [fromDevice] is true and embedded in an iframe otherwise.
+  Future<void> insertVideo(
     String url, {
     int? width,
     int? height,
@@ -257,276 +244,106 @@ class JavascriptExecutorBase {
   }) async {
     if (url.isEmpty) return;
 
-    bool? local;
-    local = fromDevice ? true : null;
     width ??= 300;
     height ??= 220;
-    // check if link is yt link
-    if (url.contains('youtu')) {
-      // Get Video id from link.
-      String youtubeId = url.split(r'?v=')[1];
-      url = 'https://www.youtube.com/embed/$youtubeId';
+    final youtubeUrl = youtubeEmbedUrl(url);
+    if (youtubeUrl != null) {
+      url = youtubeUrl;
+      fromDevice = false;
     }
     await executeJavascript(
-      "insertVideo('${_escapeJavaScriptString(url)}', '$width', '$height', $local);",
+      "insertVideo(${jsonEncode(url)}, $width, $height, $fromDevice);",
     );
   }
 
   /// Add a checkbox to the current editor
-  insertCheckbox(String text) async {
-    await executeJavascript("insertCheckbox('$text');");
+  Future<void> insertCheckbox(String text) async {
+    await executeJavascript("insertCheckbox(${jsonEncode(text)});");
   }
 
   /// Insert HTML code into the editor
   /// (It wont display the HTML code but it'll render it)
-  insertHtml(String html) async {
-    String? encodedHtml = encodeHtml(html);
-    await executeJavascript("insertHtml('$encodedHtml');");
+  ///
+  /// Scripts and event handler attributes are removed.
+  Future<void> insertHtml(String html) async {
+    await executeJavascript("insertHtml(${jsonEncode(html)});");
   }
 
   /// Enable Images resizing
-  makeImagesResizeable() async {
+  Future<void> makeImagesResizeable() async {
     await executeJavascript("makeImagesResizeable();");
   }
 
   /// Disable Images resizing
-  disableImageResizing() async {
+  Future<void> disableImageResizing() async {
     await executeJavascript("disableImageResizing();");
   }
 
   // Editor settings commands
   /// Focus on editor and bring up keyboard
-  focus() async {
+  Future<void> focus() async {
     await executeJavascript("focus();");
-    SystemChannels.textInput.invokeMethod('TextInput.show');
+    // Focusing from script doesn't open the keyboard on all platforms.
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.show');
   }
 
   /// Remove focus from the editor and close the keyboard
-  unFocus() async {
+  Future<void> unFocus() async {
     await executeJavascript("blurFocus();");
   }
 
   /// Set a [Color] for the editor's background
-  setBackgroundColor(Color? color) async {
-    String? hex = color!.toHexColorString();
-    await executeJavascript("setBackgroundColor('$hex');");
+  Future<void> setBackgroundColor(Color color) async {
+    await executeJavascript(
+        "setBackgroundColor(${jsonEncode(color.toCssColorString())});");
   }
 
   /// Set an image for the editor's background
-  setBackgroundImage(String image) async {
-    await executeJavascript("setBackgroundImage('$image');");
+  ///
+  /// [image] is the image URL.
+  Future<void> setBackgroundImage(String image) async {
+    await executeJavascript("setBackgroundImage(${jsonEncode(image)});");
   }
 
   /// Set a default editor text color
-  setBaseTextColor(Color? color) async {
-    String? hex = color!.toHexColorString();
-    await executeJavascript("setBaseTextColor('$hex');");
+  Future<void> setBaseTextColor(Color color) async {
+    await executeJavascript(
+        "setBaseTextColor(${jsonEncode(color.toCssColorString())});");
   }
 
   /// Set a default editor text font family
-  setBaseFontFamily(String fontFamily) async {
-    await executeJavascript("setBaseFontFamily('$fontFamily');");
+  Future<void> setBaseFontFamily(String fontFamily) async {
+    await executeJavascript("setBaseFontFamily(${jsonEncode(fontFamily)});");
   }
 
   /// Add padding to the editor's content
-  setPadding(EdgeInsets? padding) async {
-    String left = padding!.left.toString();
-    String top = padding.top.toString();
-    String right = padding.right.toString();
-    String bottom = padding.bottom.toString();
+  Future<void> setPadding(EdgeInsets padding) async {
     await executeJavascript(
-        "setPadding('${left}px', '${top}px', '${right}px', '${bottom}px');");
+        "setPadding('${padding.left}px', '${padding.top}px', '${padding.right}px', '${padding.bottom}px');");
   }
 
-  /// Set a hint when the editor is empty
-  /// Doesn't actually work for now
-  setPlaceholder(String placeholder) async {
-    await executeJavascript("setPlaceholder('$placeholder');");
+  /// Set a hint shown while the editor is empty
+  Future<void> setPlaceholder(String placeholder) async {
+    await executeJavascript("setPlaceholder(${jsonEncode(placeholder)});");
   }
 
   /// Set editor's width in pixels
-  setEditorWidth(int px) async {
+  Future<void> setEditorWidth(int px) async {
     await executeJavascript("setWidth('${px}px');");
   }
 
   /// Set editor's height in pixels
-  setEditorHeight(int px) async {
+  Future<void> setEditorHeight(int px) async {
     await executeJavascript("setHeight('${px}px');");
   }
 
   /// Enable text input on editor
-  setInputEnabled(bool inputEnabled) async {
+  Future<void> setInputEnabled(bool inputEnabled) async {
     await executeJavascript("setInputEnabled($inputEnabled);");
   }
 
-  decodeHtml(String html) {
-    return Uri.decodeFull(html);
+  /// Add a stylesheet to the editor page
+  Future<void> loadCSS(String cssUrl) async {
+    await executeJavascript("loadCSS(${jsonEncode(cssUrl)});");
   }
-
-  encodeHtml(String html) {
-    return Uri.encodeFull(html);
-  }
-
-  /// Escapes a string for safe use in JavaScript string literals
-  String _escapeJavaScriptString(String input) {
-    return input
-        .replaceAll('\\', '\\\\') // Escape backslashes first
-        .replaceAll("'", "\\'")   // Escape single quotes
-        .replaceAll('"', '\\"')   // Escape double quotes
-        .replaceAll('\n', '\\n')  // Escape newlines
-        .replaceAll('\r', '\\r')  // Escape carriage returns
-        .replaceAll('\t', '\\t'); // Escape tabs
-  }
-
-  /// Decodes common HTML entities back to their original characters
-  String _decodeHtmlEntities(String input) {
-    return input
-        .replaceAll('&amp;', '&')   // Decode ampersands first
-        .replaceAll('&lt;', '<')    // Decode less than
-        .replaceAll('&gt;', '>')    // Decode greater than
-        .replaceAll('&quot;', '"')  // Decode double quotes
-        .replaceAll('&#x27;', "'")  // Decode single quotes (hex)
-        .replaceAll('&#39;', "'")   // Decode single quotes (decimal)
-        .replaceAll('&nbsp;', ' '); // Decode non-breaking spaces
-  }
-
-// bool shouldOverrideUrlLoading(String url) {
-//   String decodedUrl;
-//   try {
-//     decodedUrl = decodeHtml(url);
-//   } catch (e) {
-//     // No handling
-//     return false;
-//   }
-//
-//   if (url.indexOf(editorStateChangedCallbackScheme) == 0) {
-//     editorStateChanged(
-//         decodedUrl.substring(editorStateChangedCallbackScheme.length));
-//     return true;
-//   }
-//
-//   return false;
-// }
-//
-// editorStateChanged(String statesString) {
-//   try {
-//     var editorState = EditorState.fromJson(jsonDecode(statesString));
-//
-//     bool currentHtmlChanged = this.htmlField != editorState.html;
-//     this.htmlField = editorState.html;
-//
-//     retrievedEditorState(
-//         editorState.didHtmlChange!, editorState.commandStates!);
-//
-//     if (currentHtmlChanged) {
-//       // fireHtmlChangedListenersAsync(editorState.html);
-//     }
-//   } catch (e) {
-//     throw ("Could not parse command states: $statesString $e");
-//   }
-// }
-//
-// retrievedEditorState(
-//     bool didHtmlChange, Map<CommandName, CommandState> commandStates) {
-//   if (this.didHtmlChange != didHtmlChange) {
-//     this.didHtmlChange = didHtmlChange;
-//     didHtmlChangeListeners.forEach((element) {
-//       element.didHtmlChange(didHtmlChange);
-//     });
-//   }
-//
-//   handleRetrievedCommandStates(commandStates);
-// }
-//
-// handleRetrievedCommandStates(Map<CommandName, CommandState> commandStates) {
-//   determineDerivedCommandStates(commandStates);
-//
-//   this.commandStates = commandStates;
-//   commandStatesChangedListeners.forEach((element) {
-//     element = this.commandStates;
-//   });
-// }
-//
-// determineDerivedCommandStates(Map<CommandName, CommandState> commandStates) {
-//   if (commandStates[CommandName.formatBlock] != null) {
-//     var formatCommandState = commandStates[CommandName.formatBlock];
-//     commandStates.update(
-//       CommandName.h1,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "h1")),
-//     );
-//     commandStates.update(
-//         CommandName.h2,
-//         (val) => CommandState(formatCommandState!.executable,
-//             isFormatActivated(formatCommandState, "h2")));
-//     commandStates.update(
-//       CommandName.h3,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "h3")),
-//     );
-//     commandStates.update(
-//       CommandName.h4,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "h4")),
-//     );
-//     commandStates.update(
-//       CommandName.h5,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "h5")),
-//     );
-//     commandStates.update(
-//       CommandName.h6,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "h6")),
-//     );
-//     commandStates.update(
-//       CommandName.p,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "p")),
-//     );
-//     commandStates.update(
-//       CommandName.pre,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "pre")),
-//     );
-//     commandStates.update(
-//       CommandName.br,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "")),
-//     );
-//     commandStates.update(
-//       CommandName.blockQuote,
-//       (val) => CommandState(formatCommandState!.executable,
-//           isFormatActivated(formatCommandState, "blockquote")),
-//     );
-//   }
-//
-//   if (commandStates[CommandName.insertHtml] != null) {
-//     CommandState? insertHtmlState = commandStates[CommandName.insertHtml];
-//     commandStates.update(CommandName.insertLink, (val) => insertHtmlState!);
-//     commandStates.update(CommandName.insertImage, (val) => insertHtmlState!);
-//     commandStates.update(
-//         CommandName.insertCheckbox, (val) => insertHtmlState!);
-//   }
-// }
-//
-// String isFormatActivated(CommandState formatCommandState, String format) {
-//   return (formatCommandState.value == format)
-//       .toString(); // rich_text_editor.js reports boolean values as string, so we also have to convert it to string
-// }
-//
-// addCommandStatesChangedListener(
-//     Map<CommandName, CommandState> commandStates) {
-//   commandStatesChangedListeners.add(commandStates);
-//
-//   // listener.invoke(commandStates);
-// }
-//
-// addDidHtmlChangeListener(DidHtmlChangeListener listener) {
-//   didHtmlChangeListeners.add(listener);
-// }
-//
-// addHtmlChangedListener(HtmlChangedListener listener) {
-//   htmlChangedListeners.add(listener);
-// }
 }

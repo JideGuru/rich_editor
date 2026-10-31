@@ -2,7 +2,37 @@
 // also edit class name in style.css when changing this.
 const resizableImageClass = "resizable";
 
-const EditorDefaultHtml = "<p>​</p>";
+// Removed together with their content, whatever the source.
+const sanitizerDroppedTags = ['script', 'noscript', 'object', 'embed', 'applet', 'base', 'meta', 'link',
+    'frame', 'frameset', 'template', 'svg', 'math'];
+
+// Pasted content is reduced to these tags; other elements are unwrapped so their text survives.
+const sanitizerPasteTags = ['p', 'br', 'div', 'span', 'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'del', 'ins',
+    'sub', 'sup', 'mark', 'small', 'big', 'font', 'code', 'pre', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'ul', 'ol', 'li', 'a', 'img', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'caption', 'hr', 'input'];
+
+// Pasted content also drops every content-irrelevant tag, which pasting from Word or web pages brings along.
+const sanitizerPasteDroppedTags = ['style', 'title', 'head', 'iframe', 'video', 'audio', 'form', 'button',
+    'textarea', 'select', 'option'];
+
+const sanitizerPasteAttributes = {
+    '*': ['style', 'dir'],
+    'a': ['href', 'title'],
+    'img': ['src', 'alt', 'width', 'height'],
+    'input': ['type', 'checked'],
+    'font': ['color', 'face', 'size'],
+    'td': ['colspan', 'rowspan'],
+    'th': ['colspan', 'rowspan'],
+    'ol': ['start'],
+};
+
+const sanitizerPasteStyles = ['color', 'background-color', 'font-weight', 'font-style', 'font-family', 'font-size',
+    'text-decoration', 'text-decoration-line', 'text-align', 'vertical-align', 'width', 'height'];
+
+const sanitizerUrlAttributes = ['href', 'src', 'action', 'formaction', 'xlink:href', 'poster', 'background',
+    'cite', 'data'];
+
+const safeUrlSchemes = ['http', 'https', 'mailto', 'tel', 'sms', 'file', 'blob', 'content'];
 
 
 var editor = {
@@ -18,7 +48,9 @@ var editor = {
         "endOffset": 0
     },
 
-    _useWindowLocationForEditorStateChangedCallback: false,
+    // last state sent to Flutter, so unchanged states aren't sent again
+    _lastReportedHtml: null,
+    _lastReportedCommandStates: null,
 
     _imageMinWidth: 100,
     _imageMinHeight: 50,
@@ -32,35 +64,60 @@ var editor = {
             editor._handleTextEntered(); // in newly selected area different commands may be activated / deactivated
         });
 
+        this._textField.addEventListener("input", function() {
+            editor._handleTextEntered();
+        });
+
         this._textField.addEventListener("keydown", function(e) {
             var BACKSPACE = 8;
-            var M = 77;
 
-            if(e.which == BACKSPACE) {
-                if(editor._textField.innerText.length == 1) { // prevent that first paragraph gets deleted
-                    e.preventDefault();
-
-                    return false;
-                }
-            }
-            else if(e.which == M && e.ctrlKey) { // TODO: what is Ctrl + M actually good for?
-                e.preventDefault(); // but be aware in this way also (JavaFX) application won't be able to use Ctrl + M
+            // keep the paragraph new text goes into, once everything else is deleted
+            if(e.which == BACKSPACE && editor._isEmpty(editor._textField) && editor._textField.children.length <= 1) {
+                e.preventDefault();
 
                 return false;
             }
         });
 
         this._textField.addEventListener("keyup", function(e) {
-            if(e.altKey || e.ctrlKey) { // some key combinations activate commands like CTRL + B setBold() -> update editor state so that UI is aware of this
+            if(e.altKey || e.ctrlKey || e.metaKey) { // some key combinations activate commands like CTRL + B setBold() -> update editor state so that UI is aware of this
                 editor._updateEditorState();
             }
         });
 
         this._textField.addEventListener("paste", function(e) { editor._handlePaste(e); });
 
+        // Checkboxes are handled here rather than with inline onclick attributes, so saved HTML carries no script.
+        this._textField.addEventListener("click", function(e) {
+            var target = e.target;
+            if (target && target.nodeName === 'INPUT' && target.type === 'checkbox') {
+                editor._checkboxClicked(target);
+            }
+        });
+
+        window.addEventListener("flutterInAppWebViewPlatformReady", function() {
+            editor._onPlatformReady();
+        });
+
         this._ensureEditorInsertsParagraphWhenPressingEnter();
         this._initDragImageToResize();
         this._updateEditorState();
+    },
+
+    _onPlatformReady: function() {
+        this._sendToFlutter('editorReady');
+
+        // anything reported before the bridge was ready got lost
+        this._lastReportedHtml = null;
+        this._lastReportedCommandStates = null;
+        this._updateEditorState(true);
+    },
+
+    _sendToFlutter: function(handlerName, data) {
+        var bridge = window.flutter_inappwebview;
+        if(bridge && bridge.callHandler) {
+            bridge.callHandler(handlerName, data);
+        }
     },
 
     _ensureEditorInsertsParagraphWhenPressingEnter: function() {
@@ -81,22 +138,12 @@ var editor = {
     },
 
     _initDragImageToResize: function() {
-        var angle = 0;
-
         interact.addDocument(window.document, {
           events: { passive: false },
         });
 
         interact('img.' + resizableImageClass)
-        .draggable({
-            onmove: window.dragMoveListener,
-            restrict: {
-                restriction: 'parent',
-                elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
-            },
-        })
         .resizable({
-            // resize from right or bottom
             edges: { top: true, left: true, right: true, bottom: true},
 
            // keep the edges inside the parent
@@ -115,81 +162,236 @@ var editor = {
         })
         .gesturable({
             onmove: function (event) {
-
                 var target = event.target;
 
-                angle += event.da;
+                // kept on the element, not in an attribute, so it stays out of the saved HTML
+                var angle = (target._rotation || 0) + event.da;
+                var normalized = ((angle % 360) + 360) % 360;
 
-                if(Math.abs(90 - (angle % 360)) < 10){ angle = 90;}
-                if(Math.abs(180 - (angle % 360)) < 10){ angle = 180;}
-                if(Math.abs(270 - (angle % 360)) < 10){ angle = 270;}
-                if(Math.abs(angle % 360) < 10){ angle = 0;}
+                [0, 90, 180, 270, 360].forEach(function(snap) {
+                    if(Math.abs(snap - normalized) < 10) {
+                        normalized = snap % 360;
+                    }
+                });
+                target._rotation = normalized;
 
-                target.style.webkitTransform =
-                target.style.transform =
-                'rotate(' + angle + 'deg)';
-
+                target.style.transform = 'rotate(' + normalized + 'deg)';
+            },
+            onend: function () {
+                editor._updateEditorState();
             }
         })
         .on('resizemove', function (event) {
+            var target = event.target;
+            var width = Math.round(event.rect.width);
+            var height = Math.round(event.rect.height);
 
-            var target = event.target,
-                x = (parseFloat(target.getAttribute('data-x')) || 0),
-                y = (parseFloat(target.getAttribute('data-y')) || 0);
+            target.style.width  = width + 'px';
+            target.style.height = height + 'px';
 
-            // update the element's style
-            target.style.width  = event.rect.width + 'px';
-            target.style.height = event.rect.height + 'px';
-
-            target.width  = event.rect.width + 'px';
-            target.height = event.rect.height + 'px';
-
-            target.setAttribute('data-x', x);
-            target.setAttribute('data-y', y);
-
+            target.setAttribute('width', width);
+            target.setAttribute('height', height);
+        })
+        .on('resizeend', function () {
+            editor._updateEditorState();
         });
     },
 
 
     _handleTextEntered: function() {
-        if(this._getHtml() == "<p><br></p>") { // SwiftKey, when deleting all entered text, inserts a pure "<br>" therefore check for <p>​&#8203</p> doesn't work anymore
+        var html = this._getHtml();
+        // SwiftKey, when deleting all entered text, inserts a pure "<br>" therefore check for <p>​&#8203</p> doesn't work anymore;
+        // selecting everything and deleting it leaves no paragraph at all
+        if(html == "<p><br></p>" || html == "<br>" || html == "") {
             this._ensureEditorInsertsParagraphWhenPressingEnter();
         }
 
         this._updateEditorState();
     },
 
+    // Whether element holds no text (ignoring the zero width space placeholder) and no media.
+    _isEmpty: function(element) {
+        var text = element.textContent.replace(/​/g, '').trim();
+
+        return text.length == 0 && !element.querySelector('img, video, iframe, input, hr, table');
+    },
+
+    isEmpty: function() {
+        return this._isEmpty(this._textField);
+    },
+
     _handlePaste: function(event) {
         var clipboardData = event.clipboardData || window.clipboardData;
-        var pastedData = clipboardData.getData('text/html') || clipboardData.getData('text').replace(/(?:\r\n|\r|\n)/g, '<br />'); // replace new lines // TODO: may use 'text/plain' instead of 'text'
+        if(!clipboardData) {
+            return;
+        }
 
-        this._waitTillPastedDataInserted(event, pastedData);
-    },
+        var pastedHtml = clipboardData.getData('text/html');
+        var pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
+        if(!pastedHtml && !pastedText) { // e.g. a pasted image file; the browser inserts that itself
+            return;
+        }
 
-    _waitTillPastedDataInserted: function(event, pastedData) {
-        var previousHtml = this._getHtml();
+        event.preventDefault();
 
-        setTimeout(function () { // on paste event inserted text is not inserted yet -> wait for till text has been inserted
-            editor._waitTillPastedTextInserted(previousHtml, 10, pastedData); // max 10 tries, after that we give up to prevent endless loops
-        }, 100);
-    },
-
-    _waitTillPastedTextInserted: function(previousHtml, iteration, pastedData) {
-        var hasBeenInserted = this._getHtml() != previousHtml;
-
-        if(hasBeenInserted || ! iteration) {
-            // there seems to be a bug (on Linux only?) when pasting data e.g. from Firefox: then only '' gets inserted
-            if((this._getHtml().indexOf('​ÿþ&lt;') !== -1 || this._getHtml().indexOf('ÿþ&lt;<br>') !== -1) && previousHtml.indexOf('​​ÿþ&lt;') === -1) {
-                this._textField.innerHTML = this._getHtml().replace('​ÿþ&lt;', pastedData).replace('ÿþ&lt;<br>', pastedData);
-                // TODO: set caret to end of pasted data
-            }
-
-            this._updateEditorState();
+        if(pastedHtml) {
+            this._insertHtml(this._sanitizeHtml(pastedHtml, true));
         }
         else {
-            setTimeout(function () { // wait for till pasted data has been inserted
-                editor._waitTillPastedTextInserted(pastedText, iteration - 1);
-            }, 100);
+            this._insertHtml(this._escapeHtml(pastedText).replace(/\r\n|\r|\n/g, '<br>'));
+        }
+    },
+
+
+    /*      Sanitizing      */
+
+    // Returns the url if it is safe to put into an href/src attribute, null otherwise.
+    // allowedDataPrefixes lists the data: URL types allowed, e.g. ['data:image/'].
+    _safeUrl: function(url, allowedDataPrefixes) {
+        if(url == null) {
+            return null;
+        }
+
+        url = String(url).trim();
+        // browsers ignore whitespace and control characters inside the scheme ("java\nscript:")
+        var normalized = url.replace(/[\u0000- \u007F-\u009F]/g, '').toLowerCase();
+        var match = normalized.match(/^([a-z][a-z0-9+.\-]*):/);
+
+        if(!match) { // relative URL or file path
+            return url;
+        }
+
+        if(match[1] === 'data') {
+            var prefixes = allowedDataPrefixes || [];
+            for(var i = 0; i < prefixes.length; i++) {
+                if(normalized.indexOf(prefixes[i]) === 0) {
+                    return url;
+                }
+            }
+            return null;
+        }
+
+        return safeUrlSchemes.indexOf(match[1]) !== -1 ? url : null;
+    },
+
+    _escapeHtml: function(text) {
+        var element = document.createElement('div');
+        element.textContent = text;
+        return element.innerHTML;
+    },
+
+    // Removes scripts, event handler attributes and unsafe URLs from html.
+    // strict (used for pasted content) additionally reduces it to basic formatting tags, attributes and styles.
+    _sanitizeHtml: function(html, strict) {
+        // parsing into a separate document keeps the content inert: no scripts run and no images load
+        var body = new DOMParser().parseFromString(html, 'text/html').body;
+        if(!body) {
+            return '';
+        }
+
+        this._sanitizeChildren(body, strict);
+
+        return body.innerHTML;
+    },
+
+    _sanitizeChildren: function(parent, strict) {
+        var children = Array.prototype.slice.call(parent.childNodes);
+
+        for(var i = 0; i < children.length; i++) {
+            var child = children[i];
+
+            if(child.nodeType === Node.COMMENT_NODE) {
+                parent.removeChild(child);
+                continue;
+            }
+            if(child.nodeType !== Node.ELEMENT_NODE) {
+                continue;
+            }
+
+            var tag = child.nodeName.toLowerCase();
+
+            if(sanitizerDroppedTags.indexOf(tag) !== -1 || (strict && sanitizerPasteDroppedTags.indexOf(tag) !== -1)) {
+                parent.removeChild(child);
+                continue;
+            }
+
+            if(strict && sanitizerPasteTags.indexOf(tag) === -1) { // unwrap, keeping the content
+                this._sanitizeChildren(child, strict);
+                while(child.firstChild) {
+                    parent.insertBefore(child.firstChild, child);
+                }
+                parent.removeChild(child);
+                continue;
+            }
+
+            if(!this._sanitizeAttributes(child, tag, strict)) {
+                parent.removeChild(child);
+                continue;
+            }
+
+            this._sanitizeChildren(child, strict);
+        }
+    },
+
+    // Returns false if the element has to be removed altogether.
+    _sanitizeAttributes: function(element, tag, strict) {
+        if(tag === 'input' && strict && (element.getAttribute('type') || '').toLowerCase() !== 'checkbox') {
+            return false;
+        }
+
+        var allowedDataPrefixes = tag === 'img' ? ['data:image/'] :
+                                  (tag === 'video' || tag === 'source') ? ['data:video/'] : [];
+        var attributes = Array.prototype.slice.call(element.attributes);
+
+        for(var i = 0; i < attributes.length; i++) {
+            var name = attributes[i].name.toLowerCase();
+            var value = attributes[i].value;
+
+            var allowed = name.indexOf('on') !== 0 && name !== 'srcdoc';
+
+            if(allowed && strict) {
+                allowed = sanitizerPasteAttributes['*'].indexOf(name) !== -1 ||
+                          (sanitizerPasteAttributes[tag] || []).indexOf(name) !== -1;
+            }
+
+            if(allowed && sanitizerUrlAttributes.indexOf(name) !== -1) {
+                allowed = this._safeUrl(value, allowedDataPrefixes) !== null;
+            }
+
+            if(!allowed) {
+                element.removeAttribute(attributes[i].name);
+            }
+        }
+
+        if(tag === 'iframe' && !/^https?:\/\//i.test(element.getAttribute('src') || '')) {
+            return false;
+        }
+
+        if(strict && element.hasAttribute('style')) {
+            this._sanitizeStyle(element);
+        }
+
+        return true;
+    },
+
+    _sanitizeStyle: function(element) {
+        var style = element.style;
+        var kept = [];
+
+        for(var i = 0; i < style.length; i++) {
+            var property = style[i];
+            var value = style.getPropertyValue(property);
+
+            if(sanitizerPasteStyles.indexOf(property) !== -1 && value.toLowerCase().indexOf('url(') === -1) {
+                kept.push(property + ': ' + value);
+            }
+        }
+
+        if(kept.length > 0) {
+            element.setAttribute('style', kept.join('; ') + ';');
+        }
+        else {
+            element.removeAttribute('style');
         }
     },
 
@@ -198,10 +400,23 @@ var editor = {
         return this._textField.innerHTML;
     },
 
+    // The editor content as the application gets it: without resize classes and zero width spaces,
+    // and empty when there is no content.
     _getHtmlWithoutInternalModifications: function() {
         var clonedHtml = this._textField.cloneNode(true);
 
         this._removeResizeImageClasses(clonedHtml);
+
+        if(this._isEmpty(clonedHtml)) {
+            return '';
+        }
+
+        var walker = document.createTreeWalker(clonedHtml, NodeFilter.SHOW_TEXT);
+        while(walker.nextNode()) {
+            if(walker.currentNode.nodeValue.indexOf('\u200B') !== -1) {
+                walker.currentNode.nodeValue = walker.currentNode.nodeValue.replace(/\u200B/g, '');
+            }
+        }
 
         return clonedHtml.innerHTML;
     },
@@ -215,11 +430,10 @@ var editor = {
             this._setBaseUrl(baseUrl);
         }
 
-        if(html.length != 0) {
-            var decodedHtml = this._decodeHtml(html);
-            this._textField.innerHTML = decodedHtml;
+        var safeHtml = html.length != 0 ? this._sanitizeHtml(html, false) : '';
 
-            this._htmlSetByApplication = decodedHtml;
+        if(safeHtml.length != 0) {
+            this._textField.innerHTML = safeHtml;
 
             if(this._isImageResizingEnabled) {
                 this.makeImagesResizeable();
@@ -227,15 +441,11 @@ var editor = {
         }
         else {
             this._ensureEditorInsertsParagraphWhenPressingEnter();
-
-            this._htmlSetByApplication = null;
         }
 
-        this.didHtmlChange = false;
-    },
-
-    _decodeHtml: function(html) {
-        return decodeURIComponent(html.replace(/\+/g, '%20'));
+        this._htmlSetByApplication = this._getHtmlWithoutInternalModifications();
+        this._updatePlaceholder();
+        this._updateEditorState(true);
     },
 
     _setBaseUrl: function(baseUrl) {
@@ -251,10 +461,6 @@ var editor = {
 
         baseElement.setAttribute('href', baseUrl);
         baseElement.setAttribute('target', '_blank');
-    },
-
-    useWindowLocationForEditorStateChangedCallback: function() {
-        this._useWindowLocationForEditorStateChangedCallback = true;
     },
 
     makeImagesResizeable: function() {
@@ -342,7 +548,7 @@ var editor = {
     },
 
     setTextBackgroundColor: function(color) {
-        if(color == 'rgba(0, 0, 0, 0)') { // resetting backColor does not work with any color value (whether #00000000 nor rgba(0, 0, 0, 0)), we have to pass 'inherit'. Thanks to https://stackoverflow.com/a/7071465 for pointing this out to me
+        if(/^rgba\(.*,\s*0(\.0*)?\)$/.test(color)) { // fully transparent; resetting backColor does not work with any color value (whether #00000000 nor rgba(0, 0, 0, 0)), we have to pass 'inherit'. Thanks to https://stackoverflow.com/a/7071465 for pointing this out to me
             this._executeStyleCommand('backColor', 'inherit');
         }
         else {
@@ -414,19 +620,35 @@ var editor = {
     /*      Insert elements             */
 
     insertLink: function(url, title) {
+        var safeUrl = this._safeUrl(url);
+        if(!safeUrl) {
+            return;
+        }
+
         this._restoreRange();
         var sel = document.getSelection();
 
         if (sel.toString().length == 0) {
-            this._insertHtml("<a href='"+url+"'>"+title+"</a>");
+            var link = document.createElement("a");
+            link.setAttribute("href", safeUrl);
+            link.textContent = title || url;
+            this._insertHtml(link.outerHTML);
         }
         else if (sel.rangeCount) {
            var el = document.createElement("a");
-           el.setAttribute("href", url);
-           el.setAttribute("title", title);
+           el.setAttribute("href", safeUrl);
+           if (title) {
+               el.setAttribute("title", title);
+           }
 
            var range = sel.getRangeAt(0).cloneRange();
-           range.surroundContents(el);
+           try {
+               range.surroundContents(el);
+           }
+           catch (e) { // selection only partially covers an element
+               this._executeCommand('createLink', safeUrl);
+               return;
+           }
            sel.removeAllRanges();
            sel.addRange(range);
 
@@ -435,9 +657,14 @@ var editor = {
     },
 
     insertImage: function(url, alt, width, height, rotation) {
+        var safeUrl = this._safeUrl(url, ['data:image/']);
+        if(!safeUrl) {
+            return;
+        }
+
         var imageElement = document.createElement('img');
 
-        imageElement.setAttribute('src', url);
+        imageElement.setAttribute('src', safeUrl);
 
         if(alt) {
             imageElement.setAttribute('alt', alt);
@@ -483,20 +710,47 @@ var editor = {
     },
     
     _insertYoutubeVideo: function(url, width, height) {
-        var html = '<iframe width="'+ width +'" height="'+ height +'" src="' + url + '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>';
-        this._insertHtml(html);
+        if(!/^https?:\/\//i.test(url)) {
+            return;
+        }
+
+        var iframe = document.createElement('iframe');
+        iframe.setAttribute('width', width);
+        iframe.setAttribute('height', height);
+        iframe.setAttribute('src', url);
+        iframe.setAttribute('title', 'YouTube video player');
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); // the YouTube player refuses to play without one
+        this._insertHtml(iframe.outerHTML);
     },
 
     _insertVideo: function(url, width, height) {
-        var html = '<video width="'+ width +'" height="'+ height +'" controls><source type="video/mp4" src="'+ url +'"></video>'
-        this._insertHtml(html);
+        var safeUrl = this._safeUrl(url, ['data:video/']);
+        if(!safeUrl) {
+            return;
+        }
+
+        var video = document.createElement('video');
+        video.setAttribute('width', width);
+        video.setAttribute('height', height);
+        video.setAttribute('controls', '');
+
+        var source = document.createElement('source');
+        source.setAttribute('type', 'video/mp4');
+        source.setAttribute('src', safeUrl);
+        video.appendChild(source);
+
+        this._insertHtml(video.outerHTML);
     },
 
     insertCheckbox: function(text) {
-        var editor = this;
+        var checkbox = document.createElement('input');
+        checkbox.setAttribute('type', 'checkbox');
+        checkbox.setAttribute('name', text);
+        checkbox.setAttribute('value', text);
 
-        var html = '<input type="checkbox" name="'+ text +'" value="'+ text +'" onclick="editor._checkboxClicked(this)"/> &nbsp;';
-        this._insertHtml(html);
+        this._insertHtml(checkbox.outerHTML + '&nbsp;' + this._escapeHtml(text));
     },
 
     _checkboxClicked: function(clickedCheckbox) {
@@ -511,9 +765,8 @@ var editor = {
         this._updateEditorState();
     },
 
-    insertHtml: function(encodedHtml) {
-        var html = this._decodeHtml(encodedHtml);
-        this._insertHtml(html);
+    insertHtml: function(html) {
+        this._insertHtml(this._sanitizeHtml(html, false));
     },
 
     _insertHtml: function(html) {
@@ -551,17 +804,22 @@ var editor = {
       this._textField.style.paddingBottom = bottom;
     },
 
-    // TODO: is this one ever user?
     setBackgroundColor: function(color) {
         document.body.style.backgroundColor = color;
     },
     
     setBackgroundImage: function(image) {
-        this._textField.style.backgroundImage = image;
+        if(/^url\(/i.test(image)) { // already a CSS value
+            this._textField.style.backgroundImage = image;
+            return;
+        }
+
+        var safeUrl = this._safeUrl(image, ['data:image/']);
+        this._textField.style.backgroundImage = safeUrl ? 'url(' + JSON.stringify(safeUrl) + ')' : '';
     },
     
     setWidth: function(size) {
-        this._textField.style.minWidth = size; // TODO: why did i use minWidth here but height (not minHeight) below?
+        this._textField.style.minWidth = size;
     },
     
     setHeight: function(size) {
@@ -578,12 +836,22 @@ var editor = {
     
     setPlaceholder: function(placeholder) {
         this._textField.setAttribute("placeholder", placeholder);
+        this._updatePlaceholder();
+    },
+
+    loadCSS: function(url) {
+        var link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.type = "text/css";
+        link.href = url;
+        link.media = "all";
+        document.head.appendChild(link);
     },
     
     setInputEnabled: function(inputEnabled) {
         this._textField.contentEditable = String(inputEnabled);
 
-        if(inputEnabled) { // TODO: may interferes with _isImageResizingEnabled
+        if(inputEnabled) {
             this.makeImagesResizeable();
         }
         else {
@@ -607,9 +875,9 @@ var editor = {
 
 
     _executeStyleCommand: function(command, parameter) {
-        this._executeCommand("styleWithCSS", null, true);
+        document.execCommand("styleWithCSS", false, true);
         this._executeCommand(command, parameter);
-        this._executeCommand("styleWithCSS", null, false);
+        document.execCommand("styleWithCSS", false, false);
     },
 
     _executeCommand: function(command, parameter) {
@@ -619,70 +887,61 @@ var editor = {
     },
 
 
-    _updateEditorState: function() {
+    // Reports content and command states to Flutter when they changed.
+    // fromApplication marks changes the application made itself, e.g. with setHtml().
+    _updateEditorState: function(fromApplication) {
+        this._updatePlaceholder();
+
         var html = this._getHtmlWithoutInternalModifications();
-        var didHtmlChange = (this._htmlSetByApplication != null && this._htmlSetByApplication != html) || // html set by application changed
-                            (this._htmlSetByApplication == null && html != EditorDefaultHtml); // or if html not set by application: default html changed
+        var commandStates = this._determineCommandStates();
+        var commandStatesJson = JSON.stringify(commandStates);
+        var htmlChanged = html !== this._lastReportedHtml;
 
-        if (typeof editorCallback !== 'undefined') { // in most applications like in the JavaFX app changing window.location.href doesn't work -> tell them via callback that editor state changed
-            editorCallback.updateEditorState(didHtmlChange) // these applications determine editor state manually
+        if(!htmlChanged && commandStatesJson === this._lastReportedCommandStates) {
+            return;
         }
-        else if (this._useWindowLocationForEditorStateChangedCallback) { // Android can handle changes to windows.location -> communicate editor changes via a self defined protocol name
-            var commandStates = this._determineCommandStates();
 
-            var editorState = {
-                'didHtmlChange': didHtmlChange,
-                'html': html, // TODO: remove in upcoming versions
-                'commandStates': commandStates
-            };
+        this._lastReportedHtml = html;
+        this._lastReportedCommandStates = commandStatesJson;
 
-            window.location.href = "editor-state-changed-callback://" + encodeURIComponent(JSON.stringify(editorState));
+        var editorState = {
+            'didHtmlChange': this._htmlSetByApplication != null ? html != this._htmlSetByApplication : html != '',
+            'commandStates': commandStates,
+            'fromApplication': fromApplication === true
+        };
+        if(htmlChanged) { // only send the possibly large html when needed
+            editorState.html = html;
         }
+
+        this._sendToFlutter('editorStateChanged', editorState);
+    },
+
+    _updatePlaceholder: function() {
+        var showPlaceholder = !!this._textField.getAttribute('placeholder') && this._isEmpty(this._textField);
+
+        this._textField.classList.toggle('placeholder-visible', showPlaceholder);
     },
 
     _determineCommandStates: function() {
+        var commands = ['undo', 'redo', 'bold', 'italic', 'underline', 'subscript', 'superscript', 'strikeThrough',
+            'foreColor', 'backColor', 'fontName', 'fontSize', 'formatBlock',
+            'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull',
+            'insertUnorderedList', 'insertOrderedList'];
         var commandStates = {};
 
-        this._determineStateForCommand('undo', commandStates);
-        this._determineStateForCommand('redo', commandStates);
-
-        this._determineStateForCommand('bold', commandStates);
-        this._determineStateForCommand('italic', commandStates);
-        this._determineStateForCommand('underline', commandStates);
-        this._determineStateForCommand('subscript', commandStates);
-        this._determineStateForCommand('superscript', commandStates);
-        this._determineStateForCommand('strikeThrough', commandStates);
-
-        this._determineStateForCommand('foreColor', commandStates);
-        this._determineStateForCommand('backColor', commandStates);
-
-        this._determineStateForCommand('fontName', commandStates);
-        this._determineStateForCommand('fontSize', commandStates);
-
-        this._determineStateForCommand('formatBlock', commandStates);
-        this._determineStateForCommand('removeFormat', commandStates);
-
-        this._determineStateForCommand('justifyLeft', commandStates);
-        this._determineStateForCommand('justifyCenter', commandStates);
-        this._determineStateForCommand('justifyRight', commandStates);
-        this._determineStateForCommand('justifyFull', commandStates);
-
-        this._determineStateForCommand('indent', commandStates);
-        this._determineStateForCommand('outdent', commandStates);
-
-        this._determineStateForCommand('insertUnorderedList', commandStates);
-        this._determineStateForCommand('insertOrderedList', commandStates);
-        this._determineStateForCommand('insertHorizontalRule', commandStates);
-        this._determineStateForCommand('insertHTML', commandStates);
+        for(var i = 0; i < commands.length; i++) {
+            try {
+                commandStates[commands[i]] = {
+                    'enabled': document.queryCommandEnabled(commands[i]),
+                    'active': document.queryCommandState(commands[i]),
+                    'value': String(document.queryCommandValue(commands[i]))
+                };
+            }
+            catch(e) { // unsupported command
+            }
+        }
 
         return commandStates;
-    },
-
-    _determineStateForCommand: function(command, commandStates) {
-        commandStates[command.toUpperCase()] = {
-            'executable': document.queryCommandEnabled(command),
-            'value': document.queryCommandValue(command)
-        }
     },
 
 

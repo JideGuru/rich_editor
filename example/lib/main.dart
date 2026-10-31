@@ -1,4 +1,5 @@
 import 'package:example/basic_demo.dart';
+import 'package:example/custom_toolbar_demo.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -8,16 +9,38 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+      title: 'rich_editor demo',
+      theme: ThemeData(colorSchemeSeed: Colors.blue),
+      home: const _DemoList(),
+    );
+  }
+}
+
+class _DemoList extends StatelessWidget {
+  const _DemoList();
+
+  @override
+  Widget build(BuildContext context) {
+    void open(Widget demo) => Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => demo));
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('rich_editor demos')),
+      body: ListView(
+        children: [
+          ListTile(
+            title: const Text('Basic demo'),
+            onTap: () => open(const BasicDemo()),
+          ),
+          ListTile(
+            title: const Text('Custom toolbar demo'),
+            onTap: () => open(const CustomToolbarDemo()),
+          ),
+        ],
       ),
-      home: const BasicDemo(),
-      // home: CustomToolbarDemo(),
     );
   }
 }

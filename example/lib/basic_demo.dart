@@ -11,7 +11,13 @@ class BasicDemo extends StatefulWidget {
 }
 
 class _BasicDemoState extends State<BasicDemo> {
-  GlobalKey<RichEditorState> keyEditor = GlobalKey();
+  final _controller = RichEditorController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,93 +25,75 @@ class _BasicDemoState extends State<BasicDemo> {
       appBar: AppBar(
         title: const Text('Basic Demo'),
         actions: [
-          PopupMenuButton(
-            child: const IconButton(
-              icon: Icon(Icons.more_vert),
-              onPressed: null,
-            ),
+          PopupMenuButton<int>(
+            icon: const Icon(Icons.more_vert),
             itemBuilder: (context) {
-              return [
-                const PopupMenuItem(
-                  value: 0,
-                  child: Text('Get HTML'),
-                ),
-                const PopupMenuItem(
-                  value: 1,
-                  child: Text('Set HTML'),
-                ),
-                const PopupMenuItem(
-                  value: 2,
-                  child: Text('Clear content'),
-                ),
-                const PopupMenuItem(
-                  value: 3,
-                  child: Text('Hide keyboard'),
-                ),
-                const PopupMenuItem(
-                  value: 4,
-                  child: Text('Show Keyboard'),
-                ),
+              return const [
+                PopupMenuItem(value: 0, child: Text('Get HTML')),
+                PopupMenuItem(value: 1, child: Text('Set HTML')),
+                PopupMenuItem(value: 2, child: Text('Clear content')),
+                PopupMenuItem(value: 3, child: Text('Hide keyboard')),
+                PopupMenuItem(value: 4, child: Text('Show Keyboard')),
               ];
             },
             onSelected: (val) async {
               switch (val) {
                 case 0:
-                  String? html = await keyEditor.currentState?.getHtml();
+                  final html = await _controller.getHtml();
                   debugPrint('Current HTML: $html');
-                  break;
                 case 1:
-                  keyEditor.currentState?.setHtml('');
+                  await _controller.setHtml('<p>Replaced <b>content</b></p>');
                 case 2:
-                  await keyEditor.currentState?.clear();
-                  break;
+                  await _controller.clear();
                 case 3:
-                  await keyEditor.currentState?.unFocus();
-                  break;
+                  await _controller.unFocus();
                 case 4:
-                  await keyEditor.currentState?.focus();
-                  break;
+                  await _controller.focus();
               }
             },
           ),
         ],
       ),
       body: RichEditor(
-        key: keyEditor,
-        value: '''
-        Hello, This is a rich text Editor for Flutter. It supports most things like Bold, italics and underline.
-        As well as Subscript, Superscript, Colored text, Colors bg text and hyperlink.
-        Images and Videos are also supports
-        <img src="https://lh3.googleusercontent.com/d/1MZDHszaj2_7KZ7Q6VqttSzUkIuKxC-4a" width="300" height="300" style="-webkit-text-size-adjust: 100%;">
-        ''',
+        controller: _controller,
         // initial HTML data
-        editorOptions: RichEditorOptions(
+        value: '''
+        <p>Hello, This is a rich text Editor for Flutter. It supports most things like Bold, italics and underline.</p>
+        <p>As well as Subscript, Superscript, Colored text, Colors bg text and hyperlink.</p>
+        <p>Images and Videos are also supported</p>
+        <img src="https://lh3.googleusercontent.com/d/1MZDHszaj2_7KZ7Q6VqttSzUkIuKxC-4a" width="300" height="300">
+        ''',
+        editorOptions: const RichEditorOptions(
           placeholder: 'Start typing',
           // backgroundColor: Colors.blueGrey, // Editor's bg color
           // baseTextColor: Colors.white,
           // editor padding
-          padding: const EdgeInsets.symmetric(horizontal: 5.0),
+          padding: EdgeInsets.symmetric(horizontal: 5.0),
           // font name
           baseFontFamily: 'sans-serif',
           // Position of the editing bar (BarPosition.top or BarPosition.bottom)
           barPosition: BarPosition.top,
         ),
+        onChanged: (html) => debugPrint('Changed: ${html.length} characters'),
 
         // You can return a Link (maybe you need to upload the image to your
         // storage before displaying in the editor or you can also use base64
-        getImageUrl: (image) {
-          String base64 = base64Encode(image.readAsBytesSync());
-          String base64String = 'data:image/png;base64, $base64';
-          return Future<String>.value(base64String);
+        getImageUrl: (image) async {
+          String base64 = base64Encode(await image.readAsBytes());
+          return 'data:image/png;base64,$base64';
         },
-        getVideoUrl: (video) {
-          String link = 'https://file-examples-com.github.io/uploads/2017/'
+        getVideoUrl: (video) async {
+          return 'https://file-examples-com.github.io/uploads/2017/'
               '04/file_example_MP4_480_1_5MG.mp4';
-          return Future<String>.value(link);
+        },
+        onUploadError: (error, _) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload failed: $error')),
+          );
         },
         disableVideo: true,
         onDisabledVideoTap: () {
-          showDialog(
+          showDialog<void>(
             context: context,
             builder: (context) {
               return const AlertDialog(

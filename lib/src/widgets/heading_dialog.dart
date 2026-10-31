@@ -1,40 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:rich_editor/src/models/rich_editor_labels.dart';
 
-import 'html_text.dart';
+/// A block format offered by [HeadingDialog].
+enum BlockFormat { h1, h2, h3, h4, h5, h6, paragraph, preformat, blockquote }
 
-class HeadingDialog extends StatefulWidget {
-  const HeadingDialog({super.key});
+/// Lets the user pick a [BlockFormat]; pops with it or null.
+class HeadingDialog extends StatelessWidget {
+  final RichEditorLabels labels;
 
-  @override
-  State<HeadingDialog> createState() => _HeadingDialogState();
-}
-
-class _HeadingDialogState extends State<HeadingDialog> {
-  final formats = [
-    {'id': '1', 'title': '<h1>Heading 1</h1>'},
-    {'id': '2', 'title': '<h2>Heading 2</h2>'},
-    {'id': '3', 'title': '<h3>Heading 3</h3>'},
-    {'id': '4', 'title': '<h4>Heading 4</h4>'},
-    {'id': '5', 'title': '<h5>Heading 5</h5>'},
-    {'id': '6', 'title': '<h6>Heading 6</h6>'},
-    {'id': 'p', 'title': '<p>Text body</p>'},
-    {'id': 'pre', 'title': '<pre><font face="courier">Preformat</font></pre>'},
-    {'id': 'blockquote', 'title': '<blockquote>Quote</blockquote>'},
-  ];
+  const HeadingDialog({super.key, this.labels = const RichEditorLabels()});
 
   @override
   Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final headingStyles = [
+      text.headlineMedium,
+      text.headlineSmall,
+      text.titleLarge,
+      text.titleMedium,
+      text.titleSmall,
+      text.labelLarge,
+    ];
+
+    Widget option(BlockFormat format, String title, TextStyle? style) {
+      return ListTile(
+        title: Text(title, style: style),
+        onTap: () => Navigator.pop(context, format),
+      );
+    }
+
     return AlertDialog(
+      contentPadding: const EdgeInsets.symmetric(vertical: 16),
       content: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (Map format in formats)
-              InkWell(
-                child: HtmlText(html: format['title']),
-                onTap: () => Navigator.pop(context, format['id']),
-              )
+            for (var level = 1; level <= 6; level++)
+              option(
+                BlockFormat.values[level - 1],
+                '${labels.heading} $level',
+                headingStyles[level - 1]?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            option(BlockFormat.paragraph, labels.paragraph, text.bodyLarge),
+            option(BlockFormat.preformat, labels.preformat,
+                text.bodyLarge?.copyWith(fontFamily: 'monospace')),
+            option(BlockFormat.blockquote, labels.quote,
+                text.bodyLarge?.copyWith(fontStyle: FontStyle.italic)),
           ],
         ),
       ),

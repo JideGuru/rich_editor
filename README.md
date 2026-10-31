@@ -1,11 +1,13 @@
 # ✨ rich_editor
 
-[![pub package](https://img.shields.io/pub/v/rich_editor.svg)](https://pub.dartlang.org/packages/rich_editor)
-[![pub points](https://badges.bar/rich_editor/pub%20points)](https://pub.dev/packages/rich_editor/score)
+[![pub package](https://img.shields.io/pub/v/rich_editor.svg)](https://pub.dev/packages/rich_editor)
 
 WYSIWYG editor for Flutter with a rich set of supported formatting options.
 
 Based on https://github.com/dankito/RichTextEditor, but for Flutter.
+
+Supports **Android** and **iOS**. The editor runs in a WebView
+([flutter_inappwebview](https://pub.dev/packages/flutter_inappwebview)).
 
 ## ✨ Features
 
@@ -15,17 +17,20 @@ Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 - [x] Font Size
 - [x] Text Color
 - [x] Text Background Color
-- [x] Highlight text
-- [x] Justify Left, Center, Right, Blockquote
+- [x] Justify Left, Center, Right, Full
 - [x] Indent, Outdent
 - [x] Undo, Redo
 - [x] Unordered List (Bullets)
 - [x] Ordered List (Numbers)
 - [x] Insert local or remote Image
+- [x] Insert video (YouTube links or video files)
 - [x] Insert Link
 - [x] Insert Checkbox
+- [x] Toolbar highlights active formatting
+- [x] Change notifications (`onChanged`) and a controller
+- [x] Customizable and localizable toolbar
+- [x] Pasted HTML is sanitized
 - [ ] Search
-- [ ] Icon indicators
 
 ## 📸 Screenshots
 
@@ -34,56 +39,111 @@ Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 ## Usage
 
 ```dart
-      // Insert widget into tree
-      RichEditor(
-        key: keyEditor,
-        value: 'initial html here',
-        editorOptions: RichEditorOptions(
-          placeholder: 'Start typing',
-          // backgroundColor: Colors.blueGrey, // Editor's bg color
-          // baseTextColor: Colors.white,
-          // editor padding
-          padding: EdgeInsets.symmetric(horizontal: 5.0),
-          // font name
-          baseFontFamily: 'sans-serif',
-          // Position of the editing bar (BarPosition.TOP or BarPosition.BOTTOM)
-          barPosition: BarPosition.TOP,
-        ),
-        // You can return a Link (maybe you need to upload the image to your
-        // storage before displaying in the editor or you can also use base64
-        getImageUrl: (image) {
-          String link = 'https://avatars.githubusercontent.com/u/24323581?v=4';
-          String base64 = base64Encode(image.readAsBytesSync());
-          String base64String = 'data:image/png;base64, $base64';
-          return base64String;
-        },
-      )
+final controller = RichEditorController();
+
+// Insert widget into tree
+RichEditor(
+  controller: controller,
+  value: '<p>initial html here</p>',
+  editorOptions: const RichEditorOptions(
+    placeholder: 'Start typing',
+    // backgroundColor: Colors.blueGrey, // Editor's bg color
+    // baseTextColor: Colors.white,
+    // editor padding
+    padding: EdgeInsets.symmetric(horizontal: 5.0),
+    // font name
+    baseFontFamily: 'sans-serif',
+    // Position of the editing bar (BarPosition.top, .bottom or .custom)
+    barPosition: BarPosition.top,
+  ),
+  // Called with the new HTML whenever the user edits
+  onChanged: (html) => print(html),
+  // Return a link for a picked image: upload it to your storage first,
+  // or use a data URI.
+  getImageUrl: (image) async {
+    final base64 = base64Encode(await image.readAsBytes());
+    return 'data:image/png;base64,$base64';
+  },
+  onUploadError: (error, stackTrace) => print('Upload failed: $error'),
+)
 ```
 
-Get current HTML from editor
+Dispose the controller when you're done with it.
+
+Get or set the HTML
 
 ```dart
-String? html = await keyEditor.currentState?.getHtml();
-print(html);
+String html = await controller.getHtml(); // empty when the editor is empty
+await controller.setHtml('<p>Hello</p>');
 ```
 
 Set Focus and Unfocus
 
 ```dart
-await keyEditor.currentState?.focus();
-await keyEditor.currentState?.unFocus();
+await controller.focus();
+await controller.unFocus();
 ```
 
 Clear Editor content
 
 ```dart
-await keyEditor.currentState?.clear();
+await controller.clear();
+```
+
+Run formatting commands
+
+```dart
+await controller.executor.setBold();
+await controller.executor.insertLink('https://flutter.dev', 'Flutter');
+```
+
+`GlobalKey<RichEditorState>` still works too:
+`keyEditor.currentState?.getHtml()`.
+
+### Customize the toolbar
+
+Choose and order the buttons, and translate the texts:
+
+```dart
+RichEditorOptions(
+  toolbarItems: const [
+    ToolbarItem.bold,
+    ToolbarItem.italic,
+    ToolbarItem.link,
+    ToolbarItem.bulletList,
+  ],
+  labels: const RichEditorLabels(bold: 'Fett', italic: 'Kursiv'),
+)
 ```
 
 ### Custom Toolbar
 
-If you're interested in creating your own toolbar check the
-custom_toolbar_demo.dart in the example
+Set `barPosition: BarPosition.custom` and build your own toolbar from the
+controller. It is a `ValueListenable<RichEditorValue>`, so buttons can show
+the formatting at the cursor:
+
+```dart
+ValueListenableBuilder<RichEditorValue>(
+  valueListenable: controller,
+  builder: (context, value, _) => TabButton(
+    icon: Icons.format_bold,
+    selected: value.isActive(EditorCommand.bold),
+    onTap: controller.executor.setBold,
+  ),
+)
+```
+
+See `custom_toolbar_demo.dart` in the example.
+
+### Platform setup
+
+Follow the setup of [flutter_inappwebview](https://inappwebview.dev/docs/intro)
+and [image_picker](https://pub.dev/packages/image_picker) (for iOS, the photo
+library usage description in `Info.plist`).
+
+On iOS the editor is served from `http://localhost` inside your app. If
+App Transport Security blocks it, set `NSAllowsLocalNetworking` to `true`
+under `NSAppTransportSecurity` in `Info.plist`.
 
 ## License
 

@@ -22,24 +22,27 @@ html {
 }
 
 body {
-  overflow: scroll;
-  display: table;
-  table-layout: fixed;
-  width: 100%;
-  min-height:100%;
+  margin: 0;
+  min-height: 100%;
 }
 
 #editor {
-  display: table-cell;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 100vh;
   outline: 0px solid transparent;
+  overflow-wrap: break-word;
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
 }
 
-#editor[placeholder]:empty:not(:focus):before {
+/* toggled by rich_text_editor.js: the editor always holds an empty paragraph, so :empty never matches */
+#editor.placeholder-visible::before {
   content: attr(placeholder);
+  position: absolute;
   opacity: .5;
+  pointer-events: none;
 }
 
 p {
@@ -49,7 +52,7 @@ p {
 }
 
 
-// Thanks to Jonathan B (https://stackoverflow.com/a/23501094) for figuring that out
+/* Thanks to Jonathan B (https://stackoverflow.com/a/23501094) for figuring that out */
 
 sup {
     vertical-align: super;
