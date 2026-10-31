@@ -63,23 +63,24 @@ class JavascriptExecutorBase {
 
   /// Display HTML data in editor
   setHtml(String html) async {
-    String? baseUrl;
-    String encodedHtml = encodeHtml(html);
-    await executeJavascript(
-        "setHtml(${jsonEncode(encodedHtml)}, ${jsonEncode(baseUrl)});");
+    await executeJavascript("setHtml(${jsonEncode(html)});");
     htmlField = html;
   }
 
   /// Get current HTML data from Editor
+  ///
+  /// The editor percent-encodes its HTML so it crosses the WebView bridge as
+  /// plain ASCII; it is returned exactly as the editor holds it, entities
+  /// included.
   getCurrentHtml() async {
-    String? html = await executeJavascript('getEncodedHtml();');
-    String? decodedHtml = decodeHtml(html!);
-    if (decodedHtml!.startsWith('"') && decodedHtml.endsWith('"')) {
-      decodedHtml = decodedHtml.substring(1, decodedHtml.length - 1);
+    String? html = (await executeJavascript('getEncodedHtml();'))?.toString();
+    if (html == null) return '';
+    // Some platforms hand back the JS string still wrapped in quotes.
+    // encodeURIComponent never emits a quote, so stripping them is safe.
+    if (html.length >= 2 && html.startsWith('"') && html.endsWith('"')) {
+      html = html.substring(1, html.length - 1);
     }
-    // Decode HTML entities like &amp; back to &
-    decodedHtml = _decodeHtmlEntities(decodedHtml);
-    return decodedHtml;
+    return Uri.decodeComponent(html);
   }
 
   /// Check if editor's content has been modified
@@ -132,18 +133,18 @@ class JavascriptExecutorBase {
   /// Set a [Color] for the selected text
   setTextColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setTextColor('$hex');");
+    await executeJavascript("setTextColor(${jsonEncode(hex)});");
   }
 
   /// Set a [Color] for the selected text's background
   setTextBackgroundColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setTextBackgroundColor('$hex');");
+    await executeJavascript("setTextBackgroundColor(${jsonEncode(hex)});");
   }
 
   /// Apply a font face to selected text
   setFontName(String fontName) async {
-    await executeJavascript("setFontName('$fontName');");
+    await executeJavascript("setFontName(${jsonEncode(fontName)});");
   }
 
   /// Apply a font size to selected text
@@ -152,13 +153,16 @@ class JavascriptExecutorBase {
     if (fontSize < 1 || fontSize > 7) {
       throw ("Font size should have a value between 1-7");
     }
-    await executeJavascript("setFontSize('$fontSize');");
+    await executeJavascript("setFontSize($fontSize);");
   }
 
   /// Apply a Heading style to selected text
   /// (Value can only be between 1 and 6)
   setHeading(int heading) async {
-    await executeJavascript("setHeading('$heading');");
+    if (heading < 1 || heading > 6) {
+      throw ArgumentError.value(heading, 'heading', 'must be between 1 and 6');
+    }
+    await executeJavascript("setHeading($heading);");
   }
 
   setFormattingToParagraph() async {
@@ -224,7 +228,7 @@ class JavascriptExecutorBase {
   insertLink(String url, String title) async {
     if (url.isEmpty) return;
     await executeJavascript(
-        "insertLink('${_escapeJavaScriptString(url)}', ${jsonEncode(title)});");
+        "insertLink(${jsonEncode(url)}, ${jsonEncode(title)});");
   }
 
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
@@ -243,7 +247,7 @@ class JavascriptExecutorBase {
     height ??= 300;
     alt ??= '';
     await executeJavascript(
-      "insertImage('${_escapeJavaScriptString(url)}', ${jsonEncode(alt)}, '$width', '$height', $rotation);",
+      "insertImage(${jsonEncode(url)}, ${jsonEncode(alt)}, $width, $height, $rotation);",
     );
   }
 
@@ -257,8 +261,6 @@ class JavascriptExecutorBase {
   }) async {
     if (url.isEmpty) return;
 
-    bool? local;
-    local = fromDevice ? true : null;
     width ??= 300;
     height ??= 220;
     // check if link is yt link
@@ -268,20 +270,19 @@ class JavascriptExecutorBase {
       url = 'https://www.youtube.com/embed/$youtubeId';
     }
     await executeJavascript(
-      "insertVideo('${_escapeJavaScriptString(url)}', '$width', '$height', $local);",
+      "insertVideo(${jsonEncode(url)}, $width, $height, $fromDevice);",
     );
   }
 
   /// Add a checkbox to the current editor
   insertCheckbox(String text) async {
-    await executeJavascript("insertCheckbox('$text');");
+    await executeJavascript("insertCheckbox(${jsonEncode(text)});");
   }
 
   /// Insert HTML code into the editor
   /// (It wont display the HTML code but it'll render it)
   insertHtml(String html) async {
-    String? encodedHtml = encodeHtml(html);
-    await executeJavascript("insertHtml('$encodedHtml');");
+    await executeJavascript("insertHtml(${jsonEncode(html)});");
   }
 
   /// Enable Images resizing
@@ -309,23 +310,23 @@ class JavascriptExecutorBase {
   /// Set a [Color] for the editor's background
   setBackgroundColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setBackgroundColor('$hex');");
+    await executeJavascript("setBackgroundColor(${jsonEncode(hex)});");
   }
 
   /// Set an image for the editor's background
   setBackgroundImage(String image) async {
-    await executeJavascript("setBackgroundImage('$image');");
+    await executeJavascript("setBackgroundImage(${jsonEncode(image)});");
   }
 
   /// Set a default editor text color
   setBaseTextColor(Color? color) async {
     String? hex = color!.toHexColorString();
-    await executeJavascript("setBaseTextColor('$hex');");
+    await executeJavascript("setBaseTextColor(${jsonEncode(hex)});");
   }
 
   /// Set a default editor text font family
   setBaseFontFamily(String fontFamily) async {
-    await executeJavascript("setBaseFontFamily('$fontFamily');");
+    await executeJavascript("setBaseFontFamily(${jsonEncode(fontFamily)});");
   }
 
   /// Add padding to the editor's content
@@ -341,7 +342,7 @@ class JavascriptExecutorBase {
   /// Set a hint when the editor is empty
   /// Doesn't actually work for now
   setPlaceholder(String placeholder) async {
-    await executeJavascript("setPlaceholder('$placeholder');");
+    await executeJavascript("setPlaceholder(${jsonEncode(placeholder)});");
   }
 
   /// Set editor's width in pixels
@@ -357,37 +358,6 @@ class JavascriptExecutorBase {
   /// Enable text input on editor
   setInputEnabled(bool inputEnabled) async {
     await executeJavascript("setInputEnabled($inputEnabled);");
-  }
-
-  decodeHtml(String html) {
-    return Uri.decodeFull(html);
-  }
-
-  encodeHtml(String html) {
-    return Uri.encodeFull(html);
-  }
-
-  /// Escapes a string for safe use in JavaScript string literals
-  String _escapeJavaScriptString(String input) {
-    return input
-        .replaceAll('\\', '\\\\') // Escape backslashes first
-        .replaceAll("'", "\\'")   // Escape single quotes
-        .replaceAll('"', '\\"')   // Escape double quotes
-        .replaceAll('\n', '\\n')  // Escape newlines
-        .replaceAll('\r', '\\r')  // Escape carriage returns
-        .replaceAll('\t', '\\t'); // Escape tabs
-  }
-
-  /// Decodes common HTML entities back to their original characters
-  String _decodeHtmlEntities(String input) {
-    return input
-        .replaceAll('&amp;', '&')   // Decode ampersands first
-        .replaceAll('&lt;', '<')    // Decode less than
-        .replaceAll('&gt;', '>')    // Decode greater than
-        .replaceAll('&quot;', '"')  // Decode double quotes
-        .replaceAll('&#x27;', "'")  // Decode single quotes (hex)
-        .replaceAll('&#39;', "'")   // Decode single quotes (decimal)
-        .replaceAll('&nbsp;', ' '); // Decode non-breaking spaces
   }
 
 // bool shouldOverrideUrlLoading(String url) {

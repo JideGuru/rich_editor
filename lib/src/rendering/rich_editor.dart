@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -304,7 +305,7 @@ class RichEditorState extends State<RichEditor> {
   /// Add custom CSS code to Editor
   loadCSS(String cssFile) {
     var jsCSSImport =
-        "(function() {    var head  = document.getElementsByTagName(\"head\")[0];    var link  = document.createElement(\"link\");    link.rel  = \"stylesheet\";    link.type = \"text/css\";    link.href = \"$cssFile\";    link.media = \"all\";    head.appendChild(link);}) ();";
+        "(function() {    var head  = document.getElementsByTagName(\"head\")[0];    var link  = document.createElement(\"link\");    link.rel  = \"stylesheet\";    link.type = \"text/css\";    link.href = ${jsonEncode(cssFile)};    link.media = \"all\";    head.appendChild(link);}) ();";
     _controller!.evaluateJavascript(source: jsCSSImport);
   }
 
