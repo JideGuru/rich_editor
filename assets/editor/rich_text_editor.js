@@ -2,8 +2,6 @@
 // also edit class name in style.css when changing this.
 const resizableImageClass = "resizable";
 
-const EditorDefaultHtml = "<p>​</p>";
-
 // Removed together with their content, whatever the source.
 const sanitizerDroppedTags = ['script', 'noscript', 'object', 'embed', 'applet', 'base', 'meta', 'link',
     'frame', 'frameset', 'template', 'svg', 'math'];
@@ -50,7 +48,9 @@ var editor = {
         "endOffset": 0
     },
 
-    _useWindowLocationForEditorStateChangedCallback: false,
+    // last state sent to Flutter, so unchanged states aren't sent again
+    _lastReportedHtml: null,
+    _lastReportedCommandStates: null,
 
     _imageMinWidth: 100,
     _imageMinHeight: 50,
@@ -64,26 +64,23 @@ var editor = {
             editor._handleTextEntered(); // in newly selected area different commands may be activated / deactivated
         });
 
+        this._textField.addEventListener("input", function() {
+            editor._handleTextEntered();
+        });
+
         this._textField.addEventListener("keydown", function(e) {
             var BACKSPACE = 8;
-            var M = 77;
 
-            if(e.which == BACKSPACE) {
-                if(editor._textField.innerText.length == 1) { // prevent that first paragraph gets deleted
-                    e.preventDefault();
-
-                    return false;
-                }
-            }
-            else if(e.which == M && e.ctrlKey) { // TODO: what is Ctrl + M actually good for?
-                e.preventDefault(); // but be aware in this way also (JavaFX) application won't be able to use Ctrl + M
+            // keep the paragraph new text goes into, once everything else is deleted
+            if(e.which == BACKSPACE && editor._isEmpty(editor._textField) && editor._textField.children.length <= 1) {
+                e.preventDefault();
 
                 return false;
             }
         });
 
         this._textField.addEventListener("keyup", function(e) {
-            if(e.altKey || e.ctrlKey) { // some key combinations activate commands like CTRL + B setBold() -> update editor state so that UI is aware of this
+            if(e.altKey || e.ctrlKey || e.metaKey) { // some key combinations activate commands like CTRL + B setBold() -> update editor state so that UI is aware of this
                 editor._updateEditorState();
             }
         });
@@ -98,9 +95,29 @@ var editor = {
             }
         });
 
+        window.addEventListener("flutterInAppWebViewPlatformReady", function() {
+            editor._onPlatformReady();
+        });
+
         this._ensureEditorInsertsParagraphWhenPressingEnter();
         this._initDragImageToResize();
         this._updateEditorState();
+    },
+
+    _onPlatformReady: function() {
+        this._sendToFlutter('editorReady');
+
+        // anything reported before the bridge was ready got lost
+        this._lastReportedHtml = null;
+        this._lastReportedCommandStates = null;
+        this._updateEditorState(true);
+    },
+
+    _sendToFlutter: function(handlerName, data) {
+        var bridge = window.flutter_inappwebview;
+        if(bridge && bridge.callHandler) {
+            bridge.callHandler(handlerName, data);
+        }
     },
 
     _ensureEditorInsertsParagraphWhenPressingEnter: function() {
@@ -121,22 +138,12 @@ var editor = {
     },
 
     _initDragImageToResize: function() {
-        var angle = 0;
-
         interact.addDocument(window.document, {
           events: { passive: false },
         });
 
         interact('img.' + resizableImageClass)
-        .draggable({
-            onmove: window.dragMoveListener,
-            restrict: {
-                restriction: 'parent',
-                elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
-            },
-        })
         .resizable({
-            // resize from right or bottom
             edges: { top: true, left: true, right: true, bottom: true},
 
            // keep the edges inside the parent
@@ -155,48 +162,62 @@ var editor = {
         })
         .gesturable({
             onmove: function (event) {
-
                 var target = event.target;
 
-                angle += event.da;
+                // kept on the element, not in an attribute, so it stays out of the saved HTML
+                var angle = (target._rotation || 0) + event.da;
+                var normalized = ((angle % 360) + 360) % 360;
 
-                if(Math.abs(90 - (angle % 360)) < 10){ angle = 90;}
-                if(Math.abs(180 - (angle % 360)) < 10){ angle = 180;}
-                if(Math.abs(270 - (angle % 360)) < 10){ angle = 270;}
-                if(Math.abs(angle % 360) < 10){ angle = 0;}
+                [0, 90, 180, 270, 360].forEach(function(snap) {
+                    if(Math.abs(snap - normalized) < 10) {
+                        normalized = snap % 360;
+                    }
+                });
+                target._rotation = normalized;
 
-                target.style.webkitTransform =
-                target.style.transform =
-                'rotate(' + angle + 'deg)';
-
+                target.style.transform = 'rotate(' + normalized + 'deg)';
+            },
+            onend: function () {
+                editor._updateEditorState();
             }
         })
         .on('resizemove', function (event) {
+            var target = event.target;
+            var width = Math.round(event.rect.width);
+            var height = Math.round(event.rect.height);
 
-            var target = event.target,
-                x = (parseFloat(target.getAttribute('data-x')) || 0),
-                y = (parseFloat(target.getAttribute('data-y')) || 0);
+            target.style.width  = width + 'px';
+            target.style.height = height + 'px';
 
-            // update the element's style
-            target.style.width  = event.rect.width + 'px';
-            target.style.height = event.rect.height + 'px';
-
-            target.width  = event.rect.width + 'px';
-            target.height = event.rect.height + 'px';
-
-            target.setAttribute('data-x', x);
-            target.setAttribute('data-y', y);
-
+            target.setAttribute('width', width);
+            target.setAttribute('height', height);
+        })
+        .on('resizeend', function () {
+            editor._updateEditorState();
         });
     },
 
 
     _handleTextEntered: function() {
-        if(this._getHtml() == "<p><br></p>") { // SwiftKey, when deleting all entered text, inserts a pure "<br>" therefore check for <p>​&#8203</p> doesn't work anymore
+        var html = this._getHtml();
+        // SwiftKey, when deleting all entered text, inserts a pure "<br>" therefore check for <p>​&#8203</p> doesn't work anymore;
+        // selecting everything and deleting it leaves no paragraph at all
+        if(html == "<p><br></p>" || html == "<br>" || html == "") {
             this._ensureEditorInsertsParagraphWhenPressingEnter();
         }
 
         this._updateEditorState();
+    },
+
+    // Whether element holds no text (ignoring the zero width space placeholder) and no media.
+    _isEmpty: function(element) {
+        var text = element.textContent.replace(/​/g, '').trim();
+
+        return text.length == 0 && !element.querySelector('img, video, iframe, input, hr, table');
+    },
+
+    isEmpty: function() {
+        return this._isEmpty(this._textField);
     },
 
     _handlePaste: function(event) {
@@ -379,10 +400,23 @@ var editor = {
         return this._textField.innerHTML;
     },
 
+    // The editor content as the application gets it: without resize classes and zero width spaces,
+    // and empty when there is no content.
     _getHtmlWithoutInternalModifications: function() {
         var clonedHtml = this._textField.cloneNode(true);
 
         this._removeResizeImageClasses(clonedHtml);
+
+        if(this._isEmpty(clonedHtml)) {
+            return '';
+        }
+
+        var walker = document.createTreeWalker(clonedHtml, NodeFilter.SHOW_TEXT);
+        while(walker.nextNode()) {
+            if(walker.currentNode.nodeValue.indexOf('\u200B') !== -1) {
+                walker.currentNode.nodeValue = walker.currentNode.nodeValue.replace(/\u200B/g, '');
+            }
+        }
 
         return clonedHtml.innerHTML;
     },
@@ -396,11 +430,10 @@ var editor = {
             this._setBaseUrl(baseUrl);
         }
 
-        if(html.length != 0) {
-            var safeHtml = this._sanitizeHtml(html, false);
-            this._textField.innerHTML = safeHtml;
+        var safeHtml = html.length != 0 ? this._sanitizeHtml(html, false) : '';
 
-            this._htmlSetByApplication = safeHtml;
+        if(safeHtml.length != 0) {
+            this._textField.innerHTML = safeHtml;
 
             if(this._isImageResizingEnabled) {
                 this.makeImagesResizeable();
@@ -408,11 +441,11 @@ var editor = {
         }
         else {
             this._ensureEditorInsertsParagraphWhenPressingEnter();
-
-            this._htmlSetByApplication = null;
         }
 
-        this.didHtmlChange = false;
+        this._htmlSetByApplication = this._getHtmlWithoutInternalModifications();
+        this._updatePlaceholder();
+        this._updateEditorState(true);
     },
 
     _setBaseUrl: function(baseUrl) {
@@ -428,10 +461,6 @@ var editor = {
 
         baseElement.setAttribute('href', baseUrl);
         baseElement.setAttribute('target', '_blank');
-    },
-
-    useWindowLocationForEditorStateChangedCallback: function() {
-        this._useWindowLocationForEditorStateChangedCallback = true;
     },
 
     makeImagesResizeable: function() {
@@ -519,7 +548,7 @@ var editor = {
     },
 
     setTextBackgroundColor: function(color) {
-        if(color == 'rgba(0, 0, 0, 0)') { // resetting backColor does not work with any color value (whether #00000000 nor rgba(0, 0, 0, 0)), we have to pass 'inherit'. Thanks to https://stackoverflow.com/a/7071465 for pointing this out to me
+        if(/^rgba\(.*,\s*0(\.0*)?\)$/.test(color)) { // fully transparent; resetting backColor does not work with any color value (whether #00000000 nor rgba(0, 0, 0, 0)), we have to pass 'inherit'. Thanks to https://stackoverflow.com/a/7071465 for pointing this out to me
             this._executeStyleCommand('backColor', 'inherit');
         }
         else {
@@ -692,6 +721,7 @@ var editor = {
         iframe.setAttribute('title', 'YouTube video player');
         iframe.setAttribute('frameborder', '0');
         iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); // the YouTube player refuses to play without one
         this._insertHtml(iframe.outerHTML);
     },
 
@@ -774,17 +804,22 @@ var editor = {
       this._textField.style.paddingBottom = bottom;
     },
 
-    // TODO: is this one ever user?
     setBackgroundColor: function(color) {
         document.body.style.backgroundColor = color;
     },
     
     setBackgroundImage: function(image) {
-        this._textField.style.backgroundImage = image;
+        if(/^url\(/i.test(image)) { // already a CSS value
+            this._textField.style.backgroundImage = image;
+            return;
+        }
+
+        var safeUrl = this._safeUrl(image, ['data:image/']);
+        this._textField.style.backgroundImage = safeUrl ? 'url(' + JSON.stringify(safeUrl) + ')' : '';
     },
     
     setWidth: function(size) {
-        this._textField.style.minWidth = size; // TODO: why did i use minWidth here but height (not minHeight) below?
+        this._textField.style.minWidth = size;
     },
     
     setHeight: function(size) {
@@ -801,12 +836,22 @@ var editor = {
     
     setPlaceholder: function(placeholder) {
         this._textField.setAttribute("placeholder", placeholder);
+        this._updatePlaceholder();
+    },
+
+    loadCSS: function(url) {
+        var link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.type = "text/css";
+        link.href = url;
+        link.media = "all";
+        document.head.appendChild(link);
     },
     
     setInputEnabled: function(inputEnabled) {
         this._textField.contentEditable = String(inputEnabled);
 
-        if(inputEnabled) { // TODO: may interferes with _isImageResizingEnabled
+        if(inputEnabled) {
             this.makeImagesResizeable();
         }
         else {
@@ -830,9 +875,9 @@ var editor = {
 
 
     _executeStyleCommand: function(command, parameter) {
-        this._executeCommand("styleWithCSS", null, true);
+        document.execCommand("styleWithCSS", false, true);
         this._executeCommand(command, parameter);
-        this._executeCommand("styleWithCSS", null, false);
+        document.execCommand("styleWithCSS", false, false);
     },
 
     _executeCommand: function(command, parameter) {
@@ -842,70 +887,61 @@ var editor = {
     },
 
 
-    _updateEditorState: function() {
+    // Reports content and command states to Flutter when they changed.
+    // fromApplication marks changes the application made itself, e.g. with setHtml().
+    _updateEditorState: function(fromApplication) {
+        this._updatePlaceholder();
+
         var html = this._getHtmlWithoutInternalModifications();
-        var didHtmlChange = (this._htmlSetByApplication != null && this._htmlSetByApplication != html) || // html set by application changed
-                            (this._htmlSetByApplication == null && html != EditorDefaultHtml); // or if html not set by application: default html changed
+        var commandStates = this._determineCommandStates();
+        var commandStatesJson = JSON.stringify(commandStates);
+        var htmlChanged = html !== this._lastReportedHtml;
 
-        if (typeof editorCallback !== 'undefined') { // in most applications like in the JavaFX app changing window.location.href doesn't work -> tell them via callback that editor state changed
-            editorCallback.updateEditorState(didHtmlChange) // these applications determine editor state manually
+        if(!htmlChanged && commandStatesJson === this._lastReportedCommandStates) {
+            return;
         }
-        else if (this._useWindowLocationForEditorStateChangedCallback) { // Android can handle changes to windows.location -> communicate editor changes via a self defined protocol name
-            var commandStates = this._determineCommandStates();
 
-            var editorState = {
-                'didHtmlChange': didHtmlChange,
-                'html': html, // TODO: remove in upcoming versions
-                'commandStates': commandStates
-            };
+        this._lastReportedHtml = html;
+        this._lastReportedCommandStates = commandStatesJson;
 
-            window.location.href = "editor-state-changed-callback://" + encodeURIComponent(JSON.stringify(editorState));
+        var editorState = {
+            'didHtmlChange': this._htmlSetByApplication != null ? html != this._htmlSetByApplication : html != '',
+            'commandStates': commandStates,
+            'fromApplication': fromApplication === true
+        };
+        if(htmlChanged) { // only send the possibly large html when needed
+            editorState.html = html;
         }
+
+        this._sendToFlutter('editorStateChanged', editorState);
+    },
+
+    _updatePlaceholder: function() {
+        var showPlaceholder = !!this._textField.getAttribute('placeholder') && this._isEmpty(this._textField);
+
+        this._textField.classList.toggle('placeholder-visible', showPlaceholder);
     },
 
     _determineCommandStates: function() {
+        var commands = ['undo', 'redo', 'bold', 'italic', 'underline', 'subscript', 'superscript', 'strikeThrough',
+            'foreColor', 'backColor', 'fontName', 'fontSize', 'formatBlock',
+            'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull',
+            'insertUnorderedList', 'insertOrderedList'];
         var commandStates = {};
 
-        this._determineStateForCommand('undo', commandStates);
-        this._determineStateForCommand('redo', commandStates);
-
-        this._determineStateForCommand('bold', commandStates);
-        this._determineStateForCommand('italic', commandStates);
-        this._determineStateForCommand('underline', commandStates);
-        this._determineStateForCommand('subscript', commandStates);
-        this._determineStateForCommand('superscript', commandStates);
-        this._determineStateForCommand('strikeThrough', commandStates);
-
-        this._determineStateForCommand('foreColor', commandStates);
-        this._determineStateForCommand('backColor', commandStates);
-
-        this._determineStateForCommand('fontName', commandStates);
-        this._determineStateForCommand('fontSize', commandStates);
-
-        this._determineStateForCommand('formatBlock', commandStates);
-        this._determineStateForCommand('removeFormat', commandStates);
-
-        this._determineStateForCommand('justifyLeft', commandStates);
-        this._determineStateForCommand('justifyCenter', commandStates);
-        this._determineStateForCommand('justifyRight', commandStates);
-        this._determineStateForCommand('justifyFull', commandStates);
-
-        this._determineStateForCommand('indent', commandStates);
-        this._determineStateForCommand('outdent', commandStates);
-
-        this._determineStateForCommand('insertUnorderedList', commandStates);
-        this._determineStateForCommand('insertOrderedList', commandStates);
-        this._determineStateForCommand('insertHorizontalRule', commandStates);
-        this._determineStateForCommand('insertHTML', commandStates);
+        for(var i = 0; i < commands.length; i++) {
+            try {
+                commandStates[commands[i]] = {
+                    'enabled': document.queryCommandEnabled(commands[i]),
+                    'active': document.queryCommandState(commands[i]),
+                    'value': String(document.queryCommandValue(commands[i]))
+                };
+            }
+            catch(e) { // unsupported command
+            }
+        }
 
         return commandStates;
-    },
-
-    _determineStateForCommand: function(command, commandStates) {
-        commandStates[command.toUpperCase()] = {
-            'executable': document.queryCommandEnabled(command),
-            'value': document.queryCommandValue(command)
-        }
     },
 
 

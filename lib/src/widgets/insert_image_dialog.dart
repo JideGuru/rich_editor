@@ -1,82 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:rich_editor/src/models/rich_editor_labels.dart';
 
 import 'custom_dialog_template.dart';
 
+/// The result of [InsertImageDialog].
+typedef InsertMediaResult = ({String url, String alt, bool picked});
+
+/// Asks for an image or video link, or picks one from the gallery.
+///
+/// Pops with an [InsertMediaResult] whose `picked` is true when the URL is
+/// the path of a file picked from the gallery, or null.
 class InsertImageDialog extends StatefulWidget {
   final bool isVideo;
+  final RichEditorLabels labels;
 
-  const InsertImageDialog({super.key, this.isVideo = false});
+  const InsertImageDialog({
+    super.key,
+    this.isVideo = false,
+    this.labels = const RichEditorLabels(),
+  });
 
   @override
   State<InsertImageDialog> createState() => _InsertImageDialogState();
 }
 
 class _InsertImageDialogState extends State<InsertImageDialog> {
-  TextEditingController link = TextEditingController();
+  final _link = TextEditingController();
+  final _alt = TextEditingController();
+  String? _pickedPath;
 
-  TextEditingController alt = TextEditingController();
-  bool picked = false;
+  @override
+  void dispose() {
+    _link.dispose();
+    _alt.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final labels = widget.labels;
     return CustomDialogTemplate(
+      labels: labels,
       body: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(widget.isVideo ? 'Video link' : 'Image link'),
-            ElevatedButton(
-              onPressed: () => getImage(),
-              child: const Text('...'),
+            Text(widget.isVideo ? labels.videoLink : labels.imageLink),
+            IconButton(
+              tooltip: labels.pickFromGallery,
+              onPressed: _pick,
+              icon: Icon(widget.isVideo ? Icons.video_library : Icons.photo),
             ),
           ],
         ),
         TextField(
-          controller: link,
-          decoration: const InputDecoration(
-            hintText: '',
-          ),
+          controller: _link,
+          keyboardType: TextInputType.url,
         ),
-        Visibility(
-          visible: !widget.isVideo,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20.0),
-              const Text('Alt text (optional)'),
-              TextField(
-                controller: alt,
-                decoration: const InputDecoration(
-                  hintText: '',
-                ),
-              ),
-            ],
-          ),
-        ),
+        if (!widget.isVideo) ...[
+          const SizedBox(height: 20.0),
+          Text(labels.altText),
+          TextField(controller: _alt),
+        ],
       ],
-      onDone: () => Navigator.pop(context, [link.text, alt.text, picked]),
+      onDone: () {
+        final url = _link.text.trim();
+        Navigator.pop<InsertMediaResult>(
+          context,
+          (url: url, alt: _alt.text, picked: url == _pickedPath),
+        );
+      },
       onCancel: () => Navigator.pop(context),
     );
   }
 
-  Future getImage() async {
+  Future<void> _pick() async {
     final picker = ImagePicker();
-    XFile? image;
+    final XFile? file;
     if (widget.isVideo) {
-      image = await picker.pickVideo(source: ImageSource.gallery);
+      file = await picker.pickVideo(source: ImageSource.gallery);
     } else {
-      image = await picker.pickImage(
+      file = await picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 800.0,
         maxHeight: 600.0,
       );
     }
 
-    if (image != null) {
-      link.text = image.path;
-      picked = true;
+    if (file != null && mounted) {
+      _pickedPath = file.path;
+      _link.text = file.path;
     }
   }
 }

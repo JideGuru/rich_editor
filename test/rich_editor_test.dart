@@ -4,13 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rich_editor/rich_editor.dart';
 
+// Covers JavascriptExecutorBase, the bridge between Dart and the editor page.
+
 /// Records the commands sent to the editor instead of running them.
 class _RecordingExecutor extends JavascriptExecutorBase {
   final List<String> commands = [];
   Object? result;
 
   @override
-  executeJavascript(String command) async {
+  Future<Object?> executeJavascript(String command) async {
     commands.add(command);
     return result;
   }
@@ -35,7 +37,8 @@ const _trickyStrings = [
 List<dynamic> _args(String command, String name) {
   expect(command, startsWith('$name('));
   expect(command, endsWith(');'));
-  return jsonDecode('[${command.substring(name.length + 1, command.length - 2)}]')
+  return jsonDecode(
+          '[${command.substring(name.length + 1, command.length - 2)}]')
       as List<dynamic>;
 }
 
@@ -86,15 +89,41 @@ void main() {
     }
   });
 
-  test('colors are sent as quoted hex strings', () async {
+  test('colors are sent as CSS strings, keeping transparency', () async {
     await executor.setTextColor(const Color(0xFF112233));
-    expect(_args(executor.commands.single, 'setTextColor'), ['#112233']);
+    await executor.setTextBackgroundColor(const Color(0x80FF0000));
+    await executor.setTextBackgroundColor(const Color(0x00000000));
+    expect(_args(executor.commands[0], 'setTextColor'), ['#112233']);
+    expect(_args(executor.commands[1], 'setTextBackgroundColor'),
+        ['rgba(255, 0, 0, 0.502)']);
+    expect(_args(executor.commands[2], 'setTextBackgroundColor'),
+        ['rgba(0, 0, 0, 0)']);
   });
 
   test('insertVideo sends a real boolean for fromDevice', () async {
     await executor.insertVideo('https://example.com/a.mp4', fromDevice: false);
     expect(_args(executor.commands.single, 'insertVideo'),
         ['https://example.com/a.mp4', 300, 220, false]);
+  });
+
+  test('insertVideo embeds YouTube links of any shape', () async {
+    await executor.insertVideo('https://youtu.be/dQw4w9WgXcQ?t=42');
+    expect(_args(executor.commands.single, 'insertVideo'),
+        ['https://www.youtube.com/embed/dQw4w9WgXcQ', 300, 220, false]);
+  });
+
+  test('setFontSize rejects values outside 1-7', () async {
+    expect(() => executor.setFontSize(0), throwsArgumentError);
+    expect(() => executor.setFontSize(8), throwsArgumentError);
+    await executor.setFontSize(7);
+    expect(executor.commands.single, 'setFontSize(7);');
+  });
+
+  test('isEmpty reads the editor result', () async {
+    executor.result = false;
+    expect(await executor.isEmpty(), isFalse);
+    executor.result = true;
+    expect(await executor.isEmpty(), isTrue);
   });
 
   test('setHeading rejects values outside 1-6', () async {

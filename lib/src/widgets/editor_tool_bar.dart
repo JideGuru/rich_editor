@@ -1,8 +1,12 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:rich_editor/src/extensions/extensions.dart';
+import 'package:rich_editor/src/models/rich_editor_labels.dart';
+import 'package:rich_editor/src/models/rich_editor_value.dart';
+import 'package:rich_editor/src/models/toolbar_item.dart';
 import 'package:rich_editor/src/utils/javascript_executor_base.dart';
+import 'package:rich_editor/src/utils/video_url.dart';
 import 'package:rich_editor/src/widgets/check_dialog.dart';
 import 'package:rich_editor/src/widgets/fonts_dialog.dart';
 import 'package:rich_editor/src/widgets/insert_image_dialog.dart';
@@ -17,382 +21,306 @@ class EditorToolBar extends StatelessWidget {
   final Future<String> Function(File image)? getImageUrl;
   final Future<String> Function(File video)? getVideoUrl;
   final JavascriptExecutorBase javascriptExecutor;
-  final bool? enableVideo;
-  final bool? disableVideo;
+  final bool enableVideo;
+  final bool disableVideo;
   final VoidCallback? onDisabledVideoTap;
   final bool isWebViewLoaded;
+
+  /// Buttons to show, in display order.
+  final List<ToolbarItem> items;
+  final double height;
+  final RichEditorLabels labels;
+
+  /// Formatting state at the cursor, used to highlight active buttons.
+  final Map<String, CommandState> commandStates;
+
+  /// Called when [getImageUrl] or [getVideoUrl] throws; the media is not
+  /// inserted then.
+  final void Function(Object error, StackTrace stackTrace)? onUploadError;
 
   const EditorToolBar({
     super.key,
     this.getImageUrl,
     this.getVideoUrl,
     required this.javascriptExecutor,
-    this.enableVideo,
+    this.enableVideo = true,
     this.disableVideo = false,
     this.onDisabledVideoTap,
     this.isWebViewLoaded = false,
+    this.items = ToolbarItem.values,
+    this.height = 54.0,
+    this.labels = const RichEditorLabels(),
+    this.commandStates = const {},
+    this.onUploadError,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 54.0,
-      child: Column(
-        children: [
-          Flexible(
-            child: isWebViewLoaded
-                ? ListView(
-                    shrinkWrap: true,
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      TabButton(
-                        tooltip: 'Bold',
-                        icon: Icons.format_bold,
-                        onTap: () async {
-                          await javascriptExecutor.setBold();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Italic',
-                        icon: Icons.format_italic,
-                        onTap: () async {
-                          await javascriptExecutor.setItalic();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Insert Link',
-                        icon: Icons.link,
-                        onTap: () async {
-                          var link = await showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) {
-                              return InsertLinkDialog();
-                            },
-                          );
-                          if (link != null) {
-                            await javascriptExecutor.insertLink(
-                                link[0], link[1]);
-                          }
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Insert Image',
-                        icon: Icons.image,
-                        onTap: () async {
-                          var link = await showDialog(
-                            context: context,
-                            builder: (_) {
-                              return const InsertImageDialog();
-                            },
-                          );
-                          if (link != null) {
-                            if (getImageUrl != null && link[2]) {
-                              link[0] = await getImageUrl!(File(link[0]));
-                            }
-                            await javascriptExecutor.insertImage(
-                              link[0],
-                              alt: link[1],
-                            );
-                          }
-                        },
-                      ),
-                      Visibility(
-                        visible: enableVideo!,
-                        child: TabButton(
-                          tooltip: 'Insert video',
-                          icon: Icons.video_call_sharp,
-                          disabled: disableVideo!,
-                          onTap: () async {
-                            if (disableVideo!) {
-                              onDisabledVideoTap?.call();
-                              return;
-                            }
-                            var link = await showDialog(
-                              context: context,
-                              builder: (_) {
-                                return const InsertImageDialog(isVideo: true);
-                              },
-                            );
-                            if (link != null) {
-                              if (getVideoUrl != null && link[2]) {
-                                link[0] = await getVideoUrl!(File(link[0]));
-                              }
-                              await javascriptExecutor.insertVideo(
-                                link[0],
-                                fromDevice: link[2],
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                      TabButton(
-                        tooltip: 'Underline',
-                        icon: Icons.format_underline,
-                        onTap: () async {
-                          await javascriptExecutor.setUnderline();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Strike through',
-                        icon: Icons.format_strikethrough,
-                        onTap: () async {
-                          await javascriptExecutor.setStrikeThrough();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Superscript',
-                        icon: Icons.superscript,
-                        onTap: () async {
-                          await javascriptExecutor.setSuperscript();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Subscript',
-                        icon: Icons.subscript,
-                        onTap: () async {
-                          await javascriptExecutor.setSubscript();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Clear format',
-                        icon: Icons.format_clear,
-                        onTap: () async {
-                          await javascriptExecutor.removeFormat();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Undo',
-                        icon: Icons.undo,
-                        onTap: () async {
-                          await javascriptExecutor.undo();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Redo',
-                        icon: Icons.redo,
-                        onTap: () async {
-                          await javascriptExecutor.redo();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Blockquote',
-                        icon: Icons.format_quote,
-                        onTap: () async {
-                          await javascriptExecutor.setBlockQuote();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Font format',
-                        icon: Icons.text_format,
-                        onTap: () async {
-                          var command = await showDialog(
-                            // isScrollControlled: true,
-                            context: context,
-                            builder: (_) {
-                              return const HeadingDialog();
-                            },
-                          );
-                          if (command != null) {
-                            if (command == 'p') {
-                              await javascriptExecutor
-                                  .setFormattingToParagraph();
-                            } else if (command == 'pre') {
-                              await javascriptExecutor.setPreformat();
-                            } else if (command == 'blockquote') {
-                              await javascriptExecutor.setBlockQuote();
-                            } else {
-                              await javascriptExecutor
-                                  .setHeading(int.tryParse(command)!);
-                            }
-                          }
-                        },
-                      ),
-                      // TODO: Show font button on iOS
-                      Visibility(
-                        visible: (!kIsWeb && Platform.isAndroid),
-                        child: TabButton(
-                          tooltip: 'Font face',
-                          icon: Icons.font_download,
-                          onTap: () async {
-                            var command = await showDialog(
-                              // isScrollControlled: true,
-                              context: context,
-                              builder: (_) {
-                                return const FontsDialog();
-                              },
-                            );
-                            if (command != null) {
-                              await javascriptExecutor.setFontName(command);
-                            }
-                          },
-                        ),
-                      ),
-                      TabButton(
-                        icon: Icons.format_size,
-                        tooltip: 'Font Size',
-                        onTap: () async {
-                          String? command = await showDialog(
-                            // isScrollControlled: true,
-                            context: context,
-                            builder: (_) {
-                              return const FontSizeDialog();
-                            },
-                          );
-                          if (command != null) {
-                            await javascriptExecutor
-                                .setFontSize(int.tryParse(command)!);
-                          }
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Text Color',
-                        icon: Icons.format_color_text,
-                        onTap: () async {
-                          var color = await showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return const ColorPickerDialog(
-                                  color: Colors.blue);
-                            },
-                          );
-                          if (color != null) {
-                            await javascriptExecutor.setTextColor(color);
-                          }
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Background Color',
-                        icon: Icons.format_color_fill,
-                        onTap: () async {
-                          var color = await showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return const ColorPickerDialog(
-                                  color: Colors.blue);
-                            },
-                          );
-                          if (color != null) {
-                            await javascriptExecutor
-                                .setTextBackgroundColor(color);
-                          }
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Increase Indent',
-                        icon: Icons.format_indent_increase,
-                        onTap: () async {
-                          await javascriptExecutor.setIndent();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Decrease Indent',
-                        icon: Icons.format_indent_decrease,
-                        onTap: () async {
-                          await javascriptExecutor.setOutdent();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Align Left',
-                        icon: Icons.format_align_left_outlined,
-                        onTap: () async {
-                          await javascriptExecutor.setJustifyLeft();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Align Center',
-                        icon: Icons.format_align_center,
-                        onTap: () async {
-                          await javascriptExecutor.setJustifyCenter();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Align Right',
-                        icon: Icons.format_align_right,
-                        onTap: () async {
-                          await javascriptExecutor.setJustifyRight();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Justify',
-                        icon: Icons.format_align_justify,
-                        onTap: () async {
-                          await javascriptExecutor.setJustifyFull();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Bullet List',
-                        icon: Icons.format_list_bulleted,
-                        onTap: () async {
-                          await javascriptExecutor.insertBulletList();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Numbered List',
-                        icon: Icons.format_list_numbered,
-                        onTap: () async {
-                          await javascriptExecutor.insertNumberedList();
-                        },
-                      ),
-                      TabButton(
-                        tooltip: 'Checkbox',
-                        icon: Icons.check_box_outlined,
-                        onTap: () async {
-                          var text = await showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return CheckDialog();
-                            },
-                          );
-                          if (text != null) {
-                            await javascriptExecutor.insertCheckbox(text);
-                          }
-                        },
-                      ),
-
-                      /// TODO: Implement Search feature
-                      // TabButton(
-                      //   tooltip: 'Search',
-                      //   icon: Icons.search,
-                      //   onTap: () async {
-                      //     // await javascriptExecutor.insertNumberedList();
-                      //   },
-                      // ),
-                    ],
-                  )
-                : Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context)
-                                    .primaryColor
-                                    .withValues(alpha: 0.6)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Loading editor...',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color
-                                        ?.withValues(alpha: 0.6),
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
+    if (!isWebViewLoaded) {
+      final theme = Theme.of(context);
+      return SizedBox(
+        height: height,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      theme.primaryColor.withValues(alpha: 0.6)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                labels.loadingEditor,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color:
+                      theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
           ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: height,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final item in items)
+            if (_isAvailable(item))
+              TabButton(
+                tooltip: labels.tooltip(item),
+                icon: _icon(item),
+                selected: _isSelected(item),
+                disabled: item == ToolbarItem.video && disableVideo,
+                onTap: () => _onTap(context, item),
+              ),
         ],
       ),
     );
+  }
+
+  bool _isAvailable(ToolbarItem item) {
+    return switch (item) {
+      ToolbarItem.video => enableVideo,
+      // Fonts are read from the Android system font list.
+      ToolbarItem.fontFace => Platform.isAndroid,
+      _ => true,
+    };
+  }
+
+  bool _isActive(String command) => commandStates[command]?.active ?? false;
+
+  String _blockFormat() =>
+      (commandStates[EditorCommand.formatBlock]?.value ?? '').toLowerCase();
+
+  bool _isSelected(ToolbarItem item) {
+    return switch (item) {
+      ToolbarItem.bold => _isActive(EditorCommand.bold),
+      ToolbarItem.italic => _isActive(EditorCommand.italic),
+      ToolbarItem.underline => _isActive(EditorCommand.underline),
+      ToolbarItem.strikeThrough => _isActive(EditorCommand.strikeThrough),
+      ToolbarItem.superscript => _isActive(EditorCommand.superscript),
+      ToolbarItem.subscript => _isActive(EditorCommand.subscript),
+      ToolbarItem.blockquote => _blockFormat() == 'blockquote',
+      ToolbarItem.textFormat =>
+        RegExp(r'^(h[1-6]|pre)$').hasMatch(_blockFormat()),
+      ToolbarItem.alignCenter => _isActive(EditorCommand.justifyCenter),
+      ToolbarItem.alignRight => _isActive(EditorCommand.justifyRight),
+      ToolbarItem.justify => _isActive(EditorCommand.justifyFull),
+      ToolbarItem.bulletList => _isActive(EditorCommand.insertUnorderedList),
+      ToolbarItem.numberedList => _isActive(EditorCommand.insertOrderedList),
+      _ => false,
+    };
+  }
+
+  IconData _icon(ToolbarItem item) {
+    return switch (item) {
+      ToolbarItem.bold => Icons.format_bold,
+      ToolbarItem.italic => Icons.format_italic,
+      ToolbarItem.link => Icons.link,
+      ToolbarItem.image => Icons.image,
+      ToolbarItem.video => Icons.video_call_sharp,
+      ToolbarItem.underline => Icons.format_underline,
+      ToolbarItem.strikeThrough => Icons.format_strikethrough,
+      ToolbarItem.superscript => Icons.superscript,
+      ToolbarItem.subscript => Icons.subscript,
+      ToolbarItem.clearFormat => Icons.format_clear,
+      ToolbarItem.undo => Icons.undo,
+      ToolbarItem.redo => Icons.redo,
+      ToolbarItem.blockquote => Icons.format_quote,
+      ToolbarItem.textFormat => Icons.text_format,
+      ToolbarItem.fontFace => Icons.font_download,
+      ToolbarItem.fontSize => Icons.format_size,
+      ToolbarItem.textColor => Icons.format_color_text,
+      ToolbarItem.backgroundColor => Icons.format_color_fill,
+      ToolbarItem.indent => Icons.format_indent_increase,
+      ToolbarItem.outdent => Icons.format_indent_decrease,
+      ToolbarItem.alignLeft => Icons.format_align_left_outlined,
+      ToolbarItem.alignCenter => Icons.format_align_center,
+      ToolbarItem.alignRight => Icons.format_align_right,
+      ToolbarItem.justify => Icons.format_align_justify,
+      ToolbarItem.bulletList => Icons.format_list_bulleted,
+      ToolbarItem.numberedList => Icons.format_list_numbered,
+      ToolbarItem.checkbox => Icons.check_box_outlined,
+    };
+  }
+
+  Future<void> _onTap(BuildContext context, ToolbarItem item) async {
+    final executor = javascriptExecutor;
+    switch (item) {
+      case ToolbarItem.bold:
+        await executor.setBold();
+      case ToolbarItem.italic:
+        await executor.setItalic();
+      case ToolbarItem.link:
+        final link = await showDialog<({String url, String label})>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => InsertLinkDialog(labels: labels),
+        );
+        if (link != null) await executor.insertLink(link.url, link.label);
+      case ToolbarItem.image:
+        await _insertImage(context);
+      case ToolbarItem.video:
+        if (disableVideo) {
+          onDisabledVideoTap?.call();
+        } else {
+          await _insertVideo(context);
+        }
+      case ToolbarItem.underline:
+        await executor.setUnderline();
+      case ToolbarItem.strikeThrough:
+        await executor.setStrikeThrough();
+      case ToolbarItem.superscript:
+        await executor.setSuperscript();
+      case ToolbarItem.subscript:
+        await executor.setSubscript();
+      case ToolbarItem.clearFormat:
+        await executor.removeFormat();
+      case ToolbarItem.undo:
+        await executor.undo();
+      case ToolbarItem.redo:
+        await executor.redo();
+      case ToolbarItem.blockquote:
+        await executor.setBlockQuote();
+      case ToolbarItem.textFormat:
+        final format = await showDialog<BlockFormat>(
+          context: context,
+          builder: (_) => HeadingDialog(labels: labels),
+        );
+        switch (format) {
+          case null:
+            break;
+          case BlockFormat.paragraph:
+            await executor.setFormattingToParagraph();
+          case BlockFormat.preformat:
+            await executor.setPreformat();
+          case BlockFormat.blockquote:
+            await executor.setBlockQuote();
+          default:
+            await executor.setHeading(format.index + 1);
+        }
+      case ToolbarItem.fontFace:
+        final font = await showDialog<String>(
+          context: context,
+          builder: (_) => FontsDialog(labels: labels),
+        );
+        if (font != null) await executor.setFontName(font);
+      case ToolbarItem.fontSize:
+        final size = await showDialog<int>(
+          context: context,
+          builder: (_) => FontSizeDialog(labels: labels),
+        );
+        if (size != null) await executor.setFontSize(size);
+      case ToolbarItem.textColor:
+        final color = await _pickColor(context, EditorCommand.foreColor);
+        if (color != null) await executor.setTextColor(color);
+      case ToolbarItem.backgroundColor:
+        final color = await _pickColor(context, EditorCommand.backColor);
+        if (color != null) await executor.setTextBackgroundColor(color);
+      case ToolbarItem.indent:
+        await executor.setIndent();
+      case ToolbarItem.outdent:
+        await executor.setOutdent();
+      case ToolbarItem.alignLeft:
+        await executor.setJustifyLeft();
+      case ToolbarItem.alignCenter:
+        await executor.setJustifyCenter();
+      case ToolbarItem.alignRight:
+        await executor.setJustifyRight();
+      case ToolbarItem.justify:
+        await executor.setJustifyFull();
+      case ToolbarItem.bulletList:
+        await executor.insertBulletList();
+      case ToolbarItem.numberedList:
+        await executor.insertNumberedList();
+      case ToolbarItem.checkbox:
+        final text = await showDialog<String>(
+          context: context,
+          builder: (_) => CheckDialog(labels: labels),
+        );
+        if (text != null) await executor.insertCheckbox(text);
+    }
+  }
+
+  /// Opens the color picker at the color currently applied by [command].
+  Future<Color?> _pickColor(BuildContext context, String command) {
+    final current = parseCssColor(commandStates[command]?.value ?? '');
+    return showDialog<Color>(
+      context: context,
+      builder: (_) => ColorPickerDialog(
+        color: current == null || current.a == 0 ? Colors.blue : current,
+        labels: labels,
+      ),
+    );
+  }
+
+  Future<void> _insertImage(BuildContext context) async {
+    final result = await showDialog<InsertMediaResult>(
+      context: context,
+      builder: (_) => InsertImageDialog(labels: labels),
+    );
+    if (result == null || result.url.isEmpty) return;
+
+    final url = await _upload(result, getImageUrl);
+    if (url != null) await javascriptExecutor.insertImage(url, alt: result.alt);
+  }
+
+  Future<void> _insertVideo(BuildContext context) async {
+    final result = await showDialog<InsertMediaResult>(
+      context: context,
+      builder: (_) => InsertImageDialog(isVideo: true, labels: labels),
+    );
+    if (result == null || result.url.isEmpty) return;
+
+    final url = await _upload(result, getVideoUrl);
+    if (url == null) return;
+    // Links that aren't YouTube videos are played in a <video> element.
+    await javascriptExecutor.insertVideo(
+      url,
+      fromDevice: result.picked || youtubeEmbedUrl(url) == null,
+    );
+  }
+
+  /// Uploads picked media with [upload], if given. Returns the URL to
+  /// insert, or null if the upload failed.
+  Future<String?> _upload(
+    InsertMediaResult result,
+    Future<String> Function(File file)? upload,
+  ) async {
+    if (!result.picked || upload == null) return result.url;
+    try {
+      return await upload(File(result.url));
+    } catch (error, stackTrace) {
+      onUploadError?.call(error, stackTrace);
+      return null;
+    }
   }
 }

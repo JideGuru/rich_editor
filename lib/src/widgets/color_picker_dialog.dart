@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:rich_editor/src/models/rich_editor_labels.dart';
 
+/// Lets the user pick a color, starting from [color]; pops with it or null.
 class ColorPickerDialog extends StatefulWidget {
-  final Color? color;
+  final Color color;
+  final RichEditorLabels labels;
 
-  const ColorPickerDialog({super.key, this.color});
+  const ColorPickerDialog({
+    super.key,
+    this.color = Colors.blue,
+    this.labels = const RichEditorLabels(),
+  });
 
   @override
   State<ColorPickerDialog> createState() => _ColorPickerDialogState();
 }
 
 class _ColorPickerDialogState extends State<ColorPickerDialog> {
-  Color? color;
-
-  @override
-  void initState() {
-    super.initState();
-    color = widget.color;
-  }
+  late Color _color = widget.color;
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +27,8 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
       contentPadding: const EdgeInsets.all(0.0),
       content: SingleChildScrollView(
         child: ColorPicker(
-          pickerColor: color!,
-          onColorChanged: (pickedColor) {
-            color = pickedColor;
-            setState(() {});
-          },
+          pickerColor: _color,
+          onColorChanged: (pickedColor) => setState(() => _color = pickedColor),
           colorPickerWidth: 300.0,
           pickerAreaHeightPercent: 0.7,
           enableAlpha: true,
@@ -44,9 +42,13 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, color),
-          child: const Text('Done'),
-        )
+          onPressed: () => Navigator.pop(context),
+          child: Text(widget.labels.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _color),
+          child: Text(widget.labels.done),
+        ),
       ],
     );
   }
