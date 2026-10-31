@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.0
 
 ### Added
 * The editor runs on [Tiptap](https://tiptap.dev) (ProseMirror) instead of the
