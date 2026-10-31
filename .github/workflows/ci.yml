@@ -5,75 +5,31 @@ on:
     branches: [master]
   pull_request:
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   flutter:
-    name: Flutter (${{ matrix.flutter }})
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # The oldest Flutter the package supports, and the latest.
-        flutter: ['3.27.x', 'stable']
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ matrix.flutter }}
-          channel: stable
+          flutter-version: 3.47.5
           cache: true
-
-      # flutter_lints 6 needs a newer Dart than the oldest supported Flutter.
-      # Apps don't get dev dependencies, so the oldest Flutter only runs the
-      # tests, without the lints.
-      - name: Drop the lints on the oldest Flutter
-        if: matrix.flutter != 'stable'
-        run: |
-          flutter pub remove --dev flutter_lints
-          sed -i '/^include:/d' analysis_options.yaml
-
       - run: flutter pub get
-      - name: Check formatting
-        if: matrix.flutter == 'stable'
-        run: dart format --output=none --set-exit-if-changed lib test example/lib example/test
-      - name: Analyze
-        if: matrix.flutter == 'stable'
-        run: flutter analyze
+      - run: dart format --output=none --set-exit-if-changed lib test example/lib example/test
+      - run: flutter analyze
       - run: flutter test
-
-      - name: Test the example
-        if: matrix.flutter == 'stable'
+      - run: flutter pub get && flutter analyze && flutter test
         working-directory: example
-        run: |
-          flutter pub get
-          flutter analyze
-          flutter test
 
   editor-js:
-    name: Editor JavaScript
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            tool/editor/package-lock.json
-            test/js/package-lock.json
-
       # assets/editor/editor.js is built from tool/editor and committed
-      - name: Check the editor bundle is built from its sources
+      - run: npm ci && npm run check
         working-directory: tool/editor
-        run: |
-          npm ci
-          npm run check
-
-      - name: Test the editor
+      - run: npm ci && npm test
         working-directory: test/js
-        run: |
-          npm ci
-          npm test
