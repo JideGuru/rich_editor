@@ -42,8 +42,7 @@ void main() {
   test('serves editor assets with their content types', () async {
     expect(await get('/assets/editor/editor.html'), (200, 'text/html'));
     expect(await get('/assets/editor/style.css'), (200, 'text/css'));
-    expect(await get('/assets/editor/rich_text_editor.js'),
-        (200, 'text/javascript'));
+    expect(await get('/assets/editor/editor.js'), (200, 'text/javascript'));
   });
 
   test('serves nothing outside the editor assets', () async {

@@ -55,15 +55,25 @@ jobs:
   editor-js:
     name: Editor JavaScript
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: test/js
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: test/js/package-lock.json
-      - run: npm ci
-      - run: npm test
+          cache-dependency-path: |
+            tool/editor/package-lock.json
+            test/js/package-lock.json
+
+      # assets/editor/editor.js is built from tool/editor and committed
+      - name: Check the editor bundle is built from its sources
+        working-directory: tool/editor
+        run: |
+          npm ci
+          npm run check
+
+      - name: Test the editor
+        working-directory: test/js
+        run: |
+          npm ci
+          npm test

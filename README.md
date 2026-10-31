@@ -6,8 +6,10 @@ WYSIWYG editor for Flutter with a rich set of supported formatting options.
 
 Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 
-Supports **Android** and **iOS**. The editor runs in a WebView
-([flutter_inappwebview](https://pub.dev/packages/flutter_inappwebview)).
+Supports **Android** and **iOS**. The editor is [Tiptap](https://tiptap.dev)
+(ProseMirror) running in a WebView
+([flutter_inappwebview](https://pub.dev/packages/flutter_inappwebview)). It
+needs iOS 14.5 or later, and Android System WebView 80 or later.
 
 ## ✨ Features
 
@@ -32,6 +34,7 @@ Supports **Android** and **iOS**. The editor runs in a WebView
 - [x] Read-only mode
 - [x] Edit and remove links
 - [x] Plain text output (`getText`)
+- [x] JSON output (`getJson` / `setJson`)
 - [x] Follows the app's light and dark theme
 - [x] Right-to-left languages (follows the app's text direction)
 - [x] Pasted HTML is sanitized, and a Content-Security-Policy blocks scripts in the content
@@ -89,6 +92,20 @@ Get or set the HTML, or get the plain text
 String html = await controller.getHtml(); // empty when the editor is empty
 await controller.setHtml('<p>Hello</p>');
 String text = await controller.getText(); // paragraphs on their own lines
+```
+
+The HTML is the editor's own: whatever you set is parsed into the editor's
+document, so markup it has no formatting for is dropped and the rest comes
+back in one consistent form (e.g. `<b>` comes back as `<strong>`, `<font>` as a
+styled `<span>`).
+
+Or store the content as JSON, the
+[Tiptap / ProseMirror document](https://tiptap.dev/docs/editor/core-concepts/schema),
+which other Tiptap and ProseMirror editors and renderers read as well:
+
+```dart
+Map<String, dynamic> json = await controller.getJson();
+bool ok = await controller.setJson(json); // false if it doesn't fit the editor
 ```
 
 Set Focus and Unfocus
@@ -166,7 +183,15 @@ flutter test                       # the Dart package
 (cd test/js && npm ci && npm test) # the editor JavaScript, in jsdom
 ```
 
-CI runs both, plus `dart format` and `flutter analyze`, on every pull request.
+The editor page runs `assets/editor/editor.js`, which is bundled from
+`tool/editor/src`. After changing the sources, rebuild it and commit both:
+
+```bash
+(cd tool/editor && npm ci && npm run build)
+```
+
+CI runs the tests, checks the bundle matches its sources, and runs
+`dart format` and `flutter analyze`, on every pull request.
 
 ## License
 

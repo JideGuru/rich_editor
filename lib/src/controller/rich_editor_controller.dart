@@ -14,7 +14,9 @@ class RichEditorController extends ValueNotifier<RichEditorValue> {
   final JavascriptExecutorBase executor = JavascriptExecutorBase();
 
   final ValueNotifier<bool> _ready = ValueNotifier(false);
-  String? _pendingHtml;
+
+  /// HTML or a JSON document set before the editor was ready.
+  Object? _pendingContent;
 
   /// Whether the editor finished loading and accepts commands.
   ValueListenable<bool> get ready => _ready;
@@ -28,7 +30,7 @@ class RichEditorController extends ValueNotifier<RichEditorValue> {
   /// applied once it is ready.
   Future<void> setHtml(String html) async {
     if (!_ready.value) {
-      _pendingHtml = html;
+      _pendingContent = html;
       return;
     }
     await executor.setHtml(html);
@@ -36,6 +38,24 @@ class RichEditorController extends ValueNotifier<RichEditorValue> {
 
   /// Reads the current HTML from the editor.
   Future<String> getHtml() => executor.getCurrentHtml();
+
+  /// Replaces the editor content with a Tiptap (ProseMirror) JSON document,
+  /// as [getJson] returns it.
+  ///
+  /// Returns false, leaving the content as it was, when [json] doesn't fit
+  /// the editor. Before the editor finished loading, the document is applied
+  /// once it is ready, and this returns true.
+  Future<bool> setJson(Map<String, dynamic> json) async {
+    if (!_ready.value) {
+      _pendingContent = json;
+      return true;
+    }
+    return executor.setJson(json);
+  }
+
+  /// Reads the content as a Tiptap (ProseMirror) JSON document, e.g. to
+  /// store it or to render it without a WebView.
+  Future<Map<String, dynamic>> getJson() => executor.getJson();
 
   /// The content as plain text, paragraphs and line breaks as new lines.
   Future<String> getText() => executor.getText();
@@ -52,13 +72,14 @@ class RichEditorController extends ValueNotifier<RichEditorValue> {
 
   Future<void> disableEditing() => executor.setInputEnabled(false);
 
-  /// Called by the editor once it is loaded. Returns HTML set before then.
+  /// Called by the editor once it is loaded. Returns the content set before
+  /// then: an HTML [String] or a JSON document [Map].
   @internal
-  String? markReady() {
+  Object? markReady() {
     _ready.value = true;
-    final html = _pendingHtml;
-    _pendingHtml = null;
-    return html;
+    final content = _pendingContent;
+    _pendingContent = null;
+    return content;
   }
 
   /// Called by the editor when it is disposed or switches controllers.

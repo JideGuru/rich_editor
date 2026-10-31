@@ -1,6 +1,15 @@
 ## Unreleased
 
 ### Added
+* The editor runs on [Tiptap](https://tiptap.dev) (ProseMirror) instead of the
+  browser's `contenteditable` commands, so it behaves the same on Android and iOS
+  and its HTML is clean and stable: no `<p><ol>` lists, leaked styles or zero-width
+  spaces. The Dart API, toolbar and command states are unchanged.
+* JSON output: `controller.getJson()` / `setJson()` (and on the executor and
+  `RichEditorState`) read and set the content as a Tiptap / ProseMirror JSON
+  document (#33).
+* Typed and pasted web addresses become links.
+* Indent nests list items; elsewhere it indents paragraphs and headings.
 * `onChanged` callback: the editor now reports every content change to Flutter.
 * `RichEditorController`: read and set HTML, focus, clear and run commands
   (`controller.executor`) without a `GlobalKey`. It is a `ValueListenable` of
@@ -90,6 +99,18 @@
   messages in debug builds.
 
 ### Breaking
+* HTML is parsed into the editor's document, so `getHtml` returns the editor's own
+  form of what was set: `<b>` becomes `<strong>`, `<i>` `<em>`, `<strike>` `<s>`,
+  `<font>` a styled `<span>`, `<pre>` `<pre><code>`, list items hold paragraphs, and
+  markup the editor has no formatting for (tables, classes, most inline styles) is
+  dropped. HTML saved by earlier versions loads with its formatting, including
+  images' size and rotation, checkboxes, videos and indents (which become
+  `margin-inline-start` instead of a blockquote).
+* `setHtml` cannot be undone, and font sizes are CSS keywords (`x-large`) rather
+  than `<font size>`; the `fontSize` command state still reports 1 - 7.
+* Needs iOS 14.5 or later and Android System WebView 80 or later.
+* `RichEditorController.markReady` (internal) returns the pending content as an
+  HTML `String` or a JSON `Map`.
 * Without `getImageUrl`, picked images are embedded as `data:` URLs instead of being
   inserted by their file path, which the editor page can no longer load (and never
   could on iOS). Picking videos needs `getVideoUrl`; without it the video dialog

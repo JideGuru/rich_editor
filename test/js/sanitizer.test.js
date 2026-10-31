@@ -21,35 +21,44 @@ describe('_safeUrl', () => {
   });
 });
 
-describe('_sanitizeHtml', () => {
+describe('setHtml keeps only what the editor understands', () => {
   let e;
   before(async () => (e = await loadEditor()));
   after(() => e.close());
 
-  const lenient = (html) => e.editor._sanitizeHtml(html, false);
-  const strict = (html) => e.editor._sanitizeHtml(html, true);
+  const load = (html) => {
+    e.editor.setHtml(html);
+    return e.html();
+  };
 
   it('removes scripts, event handlers and unsafe URLs', () => {
     assert.equal(
-      lenient('<p onclick="x()">a<script>x()</script></p><img src="x" onerror="x()"><a href="javascript:x()">b</a>'),
-      '<p>a</p><img src="x"><a>b</a>',
+      load('<p onclick="x()">a<script>x()</script></p><p><img src="x.png" onerror="x()"><a href="javascript:x()">b</a></p>'),
+      '<p>a</p><p><img src="x.png">b</p>',
     );
   });
 
-  it('drops svg, objects and frames but keeps https iframes', () => {
+  it('drops svg, objects, frames and unsafe media but keeps web iframes', () => {
     assert.equal(
-      lenient('<svg><script>x()</script></svg><object data="x"></object><iframe src="javascript:x"></iframe><iframe src="https://www.youtube.com/embed/a"></iframe>'),
-      '<iframe src="https://www.youtube.com/embed/a"></iframe>',
+      load('<svg><script>x()</script></svg><object data="x"></object><iframe src="javascript:x"></iframe>' +
+        '<iframe src="https://www.youtube.com/embed/a"></iframe><p><img src="javascript:x"></p>' +
+        '<video><source src="javascript:x"></video>'),
+      '<iframe frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ' +
+        'referrerpolicy="strict-origin-when-cross-origin" src="https://www.youtube.com/embed/a"></iframe><p></p>',
     );
   });
 
-  it('keeps app formatting in lenient mode', () => {
-    const html = '<p class="c" style="color: red;"><span style="background-color: yellow;">x</span></p><video controls=""><source src="https://e.com/v.mp4"></video>';
-    assert.equal(lenient(html), html);
+  it('keeps data: images but not other data: URLs', () => {
+    assert.equal(
+      load('<p><img src="data:image/png;base64,AA"><img src="data:text/html,x"></p>'),
+      '<p><img src="data:image/png;base64,AA"></p>',
+    );
   });
 
-  it('reduces pasted Word HTML to basic formatting', () => {
-    const pasted = '<html><head><style>p{color:red}</style></head><body><!--StartFragment--><p class="MsoNormal" style="mso-line-height:1;color:red;background:url(http://evil)"><o:p>Hello</o:p> <b onclick="x">bold</b><iframe src="https://e.com"></iframe><input type="text" value="t"><input type="checkbox" checked></p><!--EndFragment--></body></html>';
-    assert.equal(strict(pasted), '<p style="color: red;">Hello <b>bold</b><input type="checkbox" checked=""></p>');
+  it('reduces Word HTML to the formatting the editor has', () => {
+    const word = '<html><head><style>p{color:red}</style></head><body><!--StartFragment--><p class="MsoNormal" ' +
+      'style="mso-line-height:1;color:red;background:url(http://evil)"><o:p>Hello</o:p> <b onclick="x">bold</b>' +
+      '<input type="text" value="t"><input type="checkbox" checked></p><!--EndFragment--></body></html>';
+    assert.equal(load(word), '<p>Hello <strong>bold</strong><input type="checkbox" checked="checked"></p>');
   });
 });

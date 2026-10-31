@@ -175,6 +175,51 @@ void main() {
     expect(executor.commands[1], 'removeLink();');
   });
 
+  group('JSON', () {
+    test('getJson decodes the encoded document', () async {
+      const json = {
+        'type': 'doc',
+        'content': [
+          {
+            'type': 'paragraph',
+            'content': [
+              {'type': 'text', 'text': "C++ it's \"100%\""}
+            ]
+          }
+        ]
+      };
+      executor.result = Uri.encodeComponent(jsonEncode(json));
+      expect(await executor.getJson(), json);
+      expect(executor.commands.single, 'getEncodedJson();');
+    });
+
+    test('getJson is an empty document before the WebView is ready', () async {
+      executor.result = null;
+      expect(
+          await executor.getJson(), JavascriptExecutorBase.emptyJsonDocument);
+    });
+
+    test('setJson passes the document as a literal and reads the result',
+        () async {
+      const json = {
+        'type': 'doc',
+        'content': [
+          {
+            'type': 'paragraph',
+            'content': [
+              {'type': 'text', 'text': '</script>\'); alert(1); (\''}
+            ]
+          }
+        ]
+      };
+      executor.result = true;
+      expect(await executor.setJson(json), isTrue);
+      expect(_args(executor.commands.single, 'setJson'), [json]);
+      executor.result = false;
+      expect(await executor.setJson(json), isFalse);
+    });
+  });
+
   test('setTextDirection', () async {
     await executor.setTextDirection(TextDirection.rtl);
     expect(_args(executor.commands.single, 'setTextDirection'), ['rtl']);

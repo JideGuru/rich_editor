@@ -42,6 +42,15 @@ void main() {
       controller.dispose();
     });
 
+    test('keeps a JSON document set before the editor is ready', () async {
+      final controller = RichEditorController();
+      await controller.setHtml('<p>replaced</p>');
+      const json = {'type': 'doc', 'content': <Object>[]};
+      expect(await controller.setJson(json), isTrue);
+      expect(controller.markReady(), json);
+      controller.dispose();
+    });
+
     test('detach makes it not ready again', () {
       final controller = RichEditorController()..markReady();
       controller.detach();

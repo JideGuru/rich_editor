@@ -390,9 +390,12 @@ class RichEditorState extends State<RichEditor> {
     try {
       final controller = this.controller;
       controller.executor.init(webViewController);
-      final pendingHtml = controller.markReady();
-      final html = pendingHtml ?? widget.value;
-      if (html != null) await controller.executor.setHtml(html);
+      switch (controller.markReady() ?? widget.value) {
+        case final String html:
+          await controller.executor.setHtml(html);
+        case final Map<String, dynamic> json:
+          await controller.executor.setJson(json);
+      }
       await _applyOptions();
       _appliedColors = null;
       await _applyColors();
@@ -483,6 +486,12 @@ class RichEditorState extends State<RichEditor> {
 
   /// Set your HTML to the editor
   Future<void> setHtml(String html) => controller.setHtml(html);
+
+  /// The content as a Tiptap (ProseMirror) JSON document.
+  Future<Map<String, dynamic>> getJson() => controller.getJson();
+
+  /// Replaces the content with a JSON document; false if it doesn't fit.
+  Future<bool> setJson(Map<String, dynamic> json) => controller.setJson(json);
 
   /// Hide the keyboard using JavaScript since it's being opened in a WebView
   /// https://stackoverflow.com/a/8263376/10835183

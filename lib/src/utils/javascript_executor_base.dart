@@ -48,6 +48,35 @@ class JavascriptExecutorBase {
   /// lines.
   Future<String> getText() => _getEncoded('getEncodedText();');
 
+  /// The content as a [Tiptap](https://tiptap.dev/docs/editor/core-concepts/schema)
+  /// (ProseMirror) JSON document: `{"type": "doc", "content": [...]}`.
+  ///
+  /// Returns a document with one empty paragraph while the editor is not
+  /// loaded yet.
+  Future<Map<String, dynamic>> getJson() async {
+    final json = await _getEncoded('getEncodedJson();');
+    if (json.isEmpty) return emptyJsonDocument;
+    return jsonDecode(json) as Map<String, dynamic>;
+  }
+
+  /// Replaces the content with a JSON document, as [getJson] returns it.
+  ///
+  /// Returns false, leaving the content as it was, when [json] has nodes,
+  /// marks or attributes the editor doesn't know, or nodes where they can't
+  /// go (e.g. text directly in the document).
+  Future<bool> setJson(Map<String, dynamic> json) async {
+    final result = await executeJavascript('setJson(${jsonEncode(json)});');
+    return result == true || result.toString() == 'true';
+  }
+
+  /// What [getJson] returns for an empty editor.
+  static const emptyJsonDocument = <String, dynamic>{
+    'type': 'doc',
+    'content': [
+      {'type': 'paragraph'}
+    ],
+  };
+
   /// Runs [command], which returns a string encoded with
   /// `encodeURIComponent`, so it survives every platform's bridge.
   Future<String> _getEncoded(String command) async {

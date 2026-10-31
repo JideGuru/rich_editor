@@ -26,7 +26,8 @@ body {
   min-height: 100%;
 }
 
-#editor {
+/* the editable element Tiptap puts into <div id="editor"> */
+.ProseMirror {
   position: relative;
   box-sizing: border-box;
   min-height: 100vh;
@@ -35,14 +36,11 @@ body {
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  /* the same as normalize.css sets on html: set on the editable element too, or WebKit copies it
-     into a style attribute on everything inserted (links, images, the text around them) */
-  -webkit-text-size-adjust: 100%;
 }
 
-/* toggled by rich_text_editor.js: the editor always holds an empty paragraph, so :empty never matches */
-#editor.placeholder-visible::before {
-  content: attr(placeholder);
+/* drawn by Tiptap's placeholder extension while the editor is empty */
+.ProseMirror .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
   position: absolute;
   opacity: .5;
   pointer-events: none;
@@ -73,34 +71,18 @@ img {
 }
 
 
-/* change these when changing resizableImageClass or selectedImageClass in rich_text_editor.js */
+/* change these when changing resizableImagesClass or selectedImageClass in tool/editor/src */
 /* only the tapped image takes touches, for resizing and rotating; elsewhere they scroll the page */
-img.resizable.selected-image {
+.images-resizable img.selected-image {
   outline: 2px solid #4a90e2;
   touch-action: none;
 }
 
-
-.rotate90deg {
-    -webkit-transform: rotate(90deg);
-    -moz-transform: rotate(90deg);
-    -o-transform: rotate(90deg);
-    -ms-transform: rotate(90deg);
-    transform: rotate(90deg);
+/* code blocks keep their lines */
+pre {
+  white-space: pre-wrap;
 }
 
-.rotate180deg {
-    -webkit-transform: rotate(180deg);
-    -moz-transform: rotate(180deg);
-    -o-transform: rotate(180deg);
-    -ms-transform: rotate(180deg);
-    transform: rotate(180deg);
-}
-
-.rotate270deg {
-    -webkit-transform: rotate(270deg);
-    -moz-transform: rotate(270deg);
-    -o-transform: rotate(270deg);
-    -ms-transform: rotate(270deg);
-    transform: rotate(270deg);
+iframe, video {
+  max-width: 100%;
 }
