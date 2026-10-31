@@ -1,6 +1,8 @@
 
 // also edit class name in style.css when changing this.
 const resizableImageClass = "resizable";
+// the tapped image, which alone takes touches for resizing, so dragging over other images scrolls
+const selectedImageClass = "selected-image";
 
 // Removed together with their content, whatever the source.
 const sanitizerDroppedTags = ['script', 'noscript', 'object', 'embed', 'applet', 'base', 'meta', 'link',
@@ -55,6 +57,10 @@ var editor = {
     // pending _updateEditorState() for typing and selecting, see _scheduleEditorStateUpdate()
     _editorStateUpdateTimer: null,
 
+    // while the keyboard composes a word (e.g. Vietnamese, Chinese, Japanese or swipe input),
+    // changing the DOM would cancel it
+    _isComposing: false,
+
     _imageMinWidth: 100,
     _imageMinHeight: 50,
 
@@ -68,6 +74,15 @@ var editor = {
         });
 
         this._textField.addEventListener("input", function() {
+            editor._handleTextEntered();
+        });
+
+        this._textField.addEventListener("compositionstart", function() {
+            editor._isComposing = true;
+        });
+
+        this._textField.addEventListener("compositionend", function() {
+            editor._isComposing = false;
             editor._handleTextEntered();
         });
 
@@ -97,6 +112,8 @@ var editor = {
             if (target && target.nodeName === 'INPUT' && target.type === 'checkbox') {
                 editor._checkboxClicked(target);
             }
+            var isResizableImage = target && target.nodeName === 'IMG' && editor._hasClass(target, resizableImageClass);
+            editor._selectImage(isResizableImage ? target : null);
         });
 
         window.addEventListener("flutterInAppWebViewPlatformReady", function() {
@@ -146,7 +163,7 @@ var editor = {
           events: { passive: false },
         });
 
-        interact('img.' + resizableImageClass)
+        interact('img.' + resizableImageClass + '.' + selectedImageClass)
         .resizable({
             edges: { top: true, left: true, right: true, bottom: true},
 
@@ -206,7 +223,7 @@ var editor = {
         var html = this._getHtml();
         // SwiftKey, when deleting all entered text, inserts a pure "<br>" therefore check for <p>​&#8203</p> doesn't work anymore;
         // selecting everything and deleting it leaves no paragraph at all
-        if(html == "<p><br></p>" || html == "<br>" || html == "") {
+        if(!this._isComposing && (html == "<p><br></p>" || html == "<br>" || html == "")) {
             this._ensureEditorInsertsParagraphWhenPressingEnter();
         }
 
@@ -540,6 +557,20 @@ var editor = {
 
         for(var i = 0; i < images.length; i++) {
             this._removeClass(images[i], resizableImageClass);
+            this._removeClass(images[i], selectedImageClass);
+        }
+    },
+
+    // Selects image for resizing, or no image when null.
+    _selectImage: function(image) {
+        var selected = this._textField.querySelectorAll('img.' + selectedImageClass);
+        for(var i = 0; i < selected.length; i++) {
+            if(selected[i] !== image) {
+                this._removeClass(selected[i], selectedImageClass);
+            }
+        }
+        if(image && !this._hasClass(image, selectedImageClass)) {
+            this._addClass(image, selectedImageClass);
         }
     },
 
@@ -924,6 +955,22 @@ var editor = {
         selection.removeAllRanges();
         selection.addRange(range);
         this._textField.focus();
+        this._showKeyboard();
+    },
+
+    // Focusing from script doesn't open the keyboard on Android. The VirtualKeyboard API can, once the
+    // user has interacted with the page, but only while the editor asks for manual keyboard control,
+    // which is reset after the request was handled so tapping the editor opens the keyboard again.
+    _showKeyboard: function() {
+        var keyboard = navigator.virtualKeyboard;
+        if(!keyboard || !keyboard.show) {
+            return;
+        }
+
+        var textField = this._textField;
+        textField.setAttribute('virtualkeyboardpolicy', 'manual');
+        keyboard.show();
+        setTimeout(function() { textField.removeAttribute('virtualkeyboardpolicy'); }, 300);
     },
 
     blurFocus: function() {

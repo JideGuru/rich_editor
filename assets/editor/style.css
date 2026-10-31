@@ -70,17 +70,11 @@ img {
 }
 
 
-/* change this when changing the class name of resizableImageClass in rich_text_editor.js */
-img.resizable {
-
-  border: 1px solid gray;
-
+/* change these when changing resizableImageClass or selectedImageClass in rich_text_editor.js */
+/* only the tapped image takes touches, for resizing and rotating; elsewhere they scroll the page */
+img.resizable.selected-image {
+  outline: 2px solid #4a90e2;
   touch-action: none;
-
-  /* This is suggested by the doc, but I'm not sure that it is required when there is no large borders around the image. */
-  /* This makes things *much* easier */
- /* box-sizing: border-box;*/
-
 }
 
 

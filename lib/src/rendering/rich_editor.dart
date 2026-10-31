@@ -28,9 +28,11 @@ class RichEditor extends StatefulWidget {
   final RichEditorOptions editorOptions;
 
   /// Uploads an image the user picked, pasted or dropped, and returns its
-  /// URL. Without it, picked images are inserted by their file path, and
-  /// pasted or dropped ones as `data:` URLs.
+  /// URL. Without it, images are embedded in the HTML as `data:` URLs.
   final Future<String> Function(File image)? getImageUrl;
+
+  /// Uploads a video the user picked and returns its URL. Needed to insert
+  /// picked videos: the editor page can't play files from the device.
   final Future<String> Function(File video)? getVideoUrl;
   final bool disableVideo;
   final VoidCallback? onDisabledVideoTap;
@@ -89,8 +91,9 @@ class RichEditorState extends State<RichEditor> {
 
   JavascriptExecutorBase get javascriptExecutor => controller.executor;
 
-  // Android loads the editor from its APK assets; elsewhere it is served
-  // over http://localhost, which gives embedded videos a proper origin.
+  // Android serves the APK assets under an https origin with
+  // WebViewAssetLoader; elsewhere they are served over http://localhost.
+  // Either way the page gets a real origin, which YouTube embeds require.
   bool get _usesLocalServer => !Platform.isAndroid;
 
   @override
@@ -157,7 +160,8 @@ class RichEditorState extends State<RichEditor> {
         return;
       }
     } else {
-      url = WebUri('file:///android_asset/flutter_assets/$_assetPath');
+      url = WebUri('https://${WebViewAssetLoader.DEFAULT_DOMAIN}'
+          '/assets/flutter_assets/$_assetPath');
     }
     if (!mounted) return;
     await webViewController.loadUrl(urlRequest: URLRequest(url: url));
@@ -187,6 +191,11 @@ class RichEditorState extends State<RichEditor> {
                   allowsLinkPreview: false,
                   isFraudulentWebsiteWarningEnabled: false,
                   disallowOverScroll: true,
+                  webViewAssetLoader: _usesLocalServer
+                      ? null
+                      : WebViewAssetLoader(
+                          pathHandlers: [AssetsPathHandler(path: '/assets/')],
+                        ),
                 ),
                 onWebViewCreated: (webViewController) async {
                   _webViewController = webViewController;

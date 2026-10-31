@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
 import 'package:rich_editor/src/utils/video_url.dart';
@@ -280,11 +279,12 @@ class JavascriptExecutorBase {
   }
 
   // Editor settings commands
-  /// Focus on editor and bring up keyboard
+  /// Focuses the editor, with the caret at the end, and opens the keyboard.
+  ///
+  /// Android only opens the keyboard once the user has interacted with the
+  /// editor page, e.g. tapped it; until then only the caret is placed.
   Future<void> focus() async {
     await executeJavascript("focus();");
-    // Focusing from script doesn't open the keyboard on all platforms.
-    await SystemChannels.textInput.invokeMethod<void>('TextInput.show');
   }
 
   /// Remove focus from the editor and close the keyboard

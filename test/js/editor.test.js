@@ -258,3 +258,63 @@ describe('style commands', () => {
     ]);
   });
 });
+
+describe('images', () => {
+  const click = (element) => element.dispatchEvent(new e.window.MouseEvent('click', { bubbles: true }));
+
+  it('take resize touches only once tapped', () => {
+    e.editor.setHtml('<p><img src="https://e.com/a.png"><img src="https://e.com/b.png">text</p>');
+    const [a, b] = e.window.editor._textField.querySelectorAll('img');
+    const selected = () => [a, b].map((image) => image.classList.contains('selected-image'));
+
+    assert.deepEqual(selected(), [false, false]);
+    click(a);
+    assert.deepEqual(selected(), [true, false]);
+    click(b);
+    assert.deepEqual(selected(), [false, true]);
+    click(e.window.editor._textField.querySelector('p'));
+    assert.deepEqual(selected(), [false, false]);
+  });
+
+  it('keep the selection out of the HTML', () => {
+    e.editor.setHtml('<p><img src="https://e.com/a.png"></p>');
+    e.window.editor._textField.querySelector('img').dispatchEvent(new e.window.MouseEvent('click', { bubbles: true }));
+    assert.equal(e.html(), '<p><img src="https://e.com/a.png"></p>');
+  });
+});
+
+describe('composition', () => {
+  it('leaves the DOM alone while the keyboard composes a word', () => {
+    const field = e.window.editor._textField;
+    const paragraphFixes = () => e.executed.filter(([command]) => command === 'DefaultParagraphSeparator').length;
+    const before = paragraphFixes();
+    field.innerHTML = '';
+    field.dispatchEvent(new e.window.CompositionEvent('compositionstart'));
+    field.dispatchEvent(new e.window.Event('input'));
+    assert.equal(paragraphFixes(), before);
+
+    field.dispatchEvent(new e.window.CompositionEvent('compositionend'));
+    assert.equal(paragraphFixes(), before + 1);
+  });
+});
+
+describe('focus', () => {
+  it('opens the keyboard with the VirtualKeyboard API, then hands control back', async () => {
+    const field = e.window.editor._textField;
+    let policyWhenShown;
+    Object.defineProperty(e.window.navigator, 'virtualKeyboard', {
+      value: { show: () => (policyWhenShown = field.getAttribute('virtualkeyboardpolicy')) },
+    });
+
+    e.editor.focus();
+    assert.equal(e.window.document.activeElement, field);
+    assert.equal(policyWhenShown, 'manual');
+    await wait(350);
+    assert.equal(field.hasAttribute('virtualkeyboardpolicy'), false);
+  });
+
+  it('only focuses without the VirtualKeyboard API', () => {
+    e.editor.focus();
+    assert.equal(e.window.document.activeElement, e.window.editor._textField);
+  });
+});

@@ -15,10 +15,14 @@ class InsertImageDialog extends StatefulWidget {
   final bool isVideo;
   final RichEditorLabels labels;
 
+  /// Whether to offer picking from the gallery.
+  final bool canPick;
+
   const InsertImageDialog({
     super.key,
     this.isVideo = false,
     this.labels = const RichEditorLabels(),
+    this.canPick = true,
   });
 
   @override
@@ -47,11 +51,12 @@ class _InsertImageDialogState extends State<InsertImageDialog> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(widget.isVideo ? labels.videoLink : labels.imageLink),
-            IconButton(
-              tooltip: labels.pickFromGallery,
-              onPressed: _pick,
-              icon: Icon(widget.isVideo ? Icons.video_library : Icons.photo),
-            ),
+            if (widget.canPick)
+              IconButton(
+                tooltip: labels.pickFromGallery,
+                onPressed: _pick,
+                icon: Icon(widget.isVideo ? Icons.video_library : Icons.photo),
+              ),
           ],
         ),
         TextField(

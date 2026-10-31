@@ -50,6 +50,18 @@
   when its port was taken, used a fixed port shared by all editors, and served every app asset.
   It now uses a free port and only serves the editor files.
 * Changing `value` or `editorOptions` after the first build had no effect.
+* `focus()` opened the keyboard for Flutter's own text input, which had no text field,
+  instead of the editor. This is behind reports of the cursor disappearing (#13), Samsung
+  keyboards failing with Vietnamese (#15) and crashes in `onCreateInputConnection` (#22).
+  The keyboard is now opened for the editor itself, on Android once the user has
+  interacted with the editor.
+* The editor no longer changes the page while the keyboard composes a word, which
+  cancelled composing input (Vietnamese, Chinese, Japanese, swipe typing).
+* Dragging across an image didn't scroll the editor. Images now take touches for
+  resizing and rotating only once tapped, and are outlined then.
+* Android: YouTube embeds failed with "Error 153", because the editor page had no
+  origin. Android now serves the editor under `https://appassets.androidplatform.net`
+  with `WebViewAssetLoader`, instead of loading it from `file:///android_asset`.
 * Typing in large documents sent the whole HTML to Flutter on every keystroke and
   selection change; reports are now batched (at most every 50 ms, less often for
   large documents).
@@ -59,6 +71,10 @@
   messages in debug builds.
 
 ### Breaking
+* Without `getImageUrl`, picked images are embedded as `data:` URLs instead of being
+  inserted by their file path, which the editor page can no longer load (and never
+  could on iOS). Picking videos needs `getVideoUrl`; without it the video dialog
+  only takes links.
 * `RichEditor.editorOptions` and `RichEditor.disableVideo` are non-nullable;
   `RichEditorOptions` is immutable with `barPosition` defaulting to `BarPosition.top`.
 * Executor methods return `Future<void>` (`getCurrentHtml` returns `Future<String>`),

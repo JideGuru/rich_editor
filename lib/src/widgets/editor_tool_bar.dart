@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -299,14 +300,19 @@ class EditorToolBar extends StatelessWidget {
     );
     if (result == null || result.url.isEmpty) return;
 
-    final url = await _upload(result, getImageUrl);
+    final url = await _upload(result, getImageUrl ?? _imageDataUrl);
     if (url != null) await javascriptExecutor.insertImage(url, alt: result.alt);
   }
 
   Future<void> _insertVideo(BuildContext context) async {
     final result = await showDialog<InsertMediaResult>(
       context: context,
-      builder: (_) => InsertImageDialog(isVideo: true, labels: labels),
+      builder: (_) => InsertImageDialog(
+        isVideo: true,
+        labels: labels,
+        // the editor page can't play videos from the device
+        canPick: getVideoUrl != null,
+      ),
     );
     if (result == null || result.url.isEmpty) return;
 
@@ -317,6 +323,17 @@ class EditorToolBar extends StatelessWidget {
       url,
       fromDevice: result.picked || youtubeEmbedUrl(url) == null,
     );
+  }
+
+  /// Embeds a picked image without [getImageUrl]: the editor page can't
+  /// load device files, and the HTML stays usable on other devices.
+  static Future<String> _imageDataUrl(File image) async {
+    final extension = image.path.split('.').last.toLowerCase();
+    final type = switch (extension) {
+      'png' || 'gif' || 'webp' || 'bmp' => extension,
+      _ => 'jpeg',
+    };
+    return 'data:image/$type;base64,${base64Encode(await image.readAsBytes())}';
   }
 
   /// Uploads picked media with [upload], if given. Returns the URL to

@@ -160,4 +160,55 @@ void main() {
     expect(reported, isA<Exception>());
     expect(executor.commands, isEmpty);
   });
+
+  testWidgets('embeds a picked image without getImageUrl', (tester) async {
+    final directory = Directory.systemTemp.createTempSync('rich_editor_test');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final image = File('${directory.path}/picked.png')
+      ..writeAsBytesSync([1, 2, 3]);
+
+    await tester.pumpWidget(_app(EditorToolBar(
+      javascriptExecutor: executor,
+      isWebViewLoaded: true,
+      items: const [ToolbarItem.image],
+      onUploadError: (error, _) => fail('$error'),
+    )));
+
+    final toolbarContext = tester.element(find.byType(TabButton));
+    await tester.tap(find.byType(TabButton));
+    await tester.pumpAndSettle();
+    Navigator.of(toolbarContext).pop<({String url, String alt, bool picked})>(
+        (url: image.path, alt: 'a', picked: true));
+    // Reading the file is real IO, done in several steps that each need the
+    // real event loop.
+    for (var i = 0; i < 20 && executor.commands.isEmpty; i++) {
+      await tester.pump();
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+    }
+
+    expect(executor.commands, [
+      'insertImage("data:image/png;base64,AQID", "a", 300, 300, 0);',
+    ]);
+  });
+
+  testWidgets('offers picking videos only with getVideoUrl', (tester) async {
+    Future<void> openVideoDialog({required bool canUpload}) async {
+      await tester.pumpWidget(const SizedBox()); // closes an open dialog
+      await tester.pumpWidget(_app(EditorToolBar(
+        javascriptExecutor: executor,
+        isWebViewLoaded: true,
+        items: const [ToolbarItem.video],
+        getVideoUrl: canUpload ? (File _) async => 'https://e.com/v.mp4' : null,
+      )));
+      await tester.tap(find.byType(TabButton));
+      await tester.pumpAndSettle();
+    }
+
+    await openVideoDialog(canUpload: false);
+    expect(find.byIcon(Icons.video_library), findsNothing);
+
+    await openVideoDialog(canUpload: true);
+    expect(find.byIcon(Icons.video_library), findsOneWidget);
+  });
 }

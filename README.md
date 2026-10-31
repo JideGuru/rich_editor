@@ -72,8 +72,12 @@ RichEditor(
 Dispose the controller when you're done with it.
 
 Set `readOnly: true` to show the content without the toolbar and without
-letting the user edit it, and `autofocus: true` to focus the editor and show
-the keyboard once it has loaded.
+letting the user edit it, and `autofocus: true` to focus the editor once it has
+loaded. Android only opens the keyboard from code once the user has interacted
+with the editor; before that, `focus()` places the caret.
+
+Without `getImageUrl`, picked and pasted images are embedded in the HTML as
+`data:` URLs. Picking videos from the gallery needs `getVideoUrl`.
 
 Get or set the HTML
 
