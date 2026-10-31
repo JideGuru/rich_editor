@@ -110,7 +110,12 @@ var editor = {
         this._textField.addEventListener("click", function(e) {
             var target = e.target;
             if (target && target.nodeName === 'INPUT' && target.type === 'checkbox') {
-                editor._checkboxClicked(target);
+                if (String(editor._textField.contentEditable) === 'false') {
+                    e.preventDefault(); // read-only: checkboxes stay as they are, like the rest of the content
+                }
+                else {
+                    editor._checkboxClicked(target);
+                }
             }
             var isResizableImage = target && target.nodeName === 'IMG' && editor._hasClass(target, resizableImageClass);
             editor._selectImage(isResizableImage ? target : null);
@@ -491,7 +496,38 @@ var editor = {
             }
         }
 
+        this._moveListsOutOfParagraphs(clonedHtml);
+
         return clonedHtml.innerHTML;
+    },
+
+    // Chromium's list commands put the list inside the paragraph (<p><ol>...</ol></p>), which is
+    // not valid HTML: parsing it again (setHtml, a browser, ...) adds an empty paragraph before and
+    // after the list. Only the copy handed to the application is fixed; changing the live content
+    // outside execCommand would break undo.
+    _moveListsOutOfParagraphs: function(root) {
+        var lists = root.querySelectorAll('p > ul, p > ol');
+        for(var i = 0; i < lists.length; i++) {
+            var list = lists[i];
+            var paragraph = list.parentNode;
+            var after = paragraph.cloneNode(false); // keeps its alignment and other attributes
+            while(list.nextSibling) {
+                after.appendChild(list.nextSibling);
+            }
+            paragraph.parentNode.insertBefore(after, paragraph.nextSibling);
+            paragraph.parentNode.insertBefore(list, after);
+            if(paragraph.hasAttribute('style') && !list.hasAttribute('style')) {
+                list.setAttribute('style', paragraph.getAttribute('style')); // e.g. its alignment
+            }
+
+            [paragraph, after].forEach(function(part) {
+                // a second list of the same paragraph is moved out on a later iteration
+                var hasContent = part.querySelector('img, video, iframe, input, hr, table, ul, ol');
+                if(!hasContent && !part.textContent.replace(/[\s\u00A0\u200B]/g, '')) {
+                    part.parentNode.removeChild(part);
+                }
+            });
+        }
     },
 
     // The text without markup, paragraphs and line breaks as new lines.

@@ -49,7 +49,7 @@ class RichEditor extends StatefulWidget {
   final RichEditorToolbarBuilder? toolbarBuilder;
 
   /// Shows the content without letting the user edit it, and hides the
-  /// toolbar.
+  /// toolbar. Checkboxes cannot be ticked either.
   final bool readOnly;
 
   /// Focuses the editor, showing the keyboard, once it has loaded.

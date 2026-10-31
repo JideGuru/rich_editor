@@ -35,6 +35,10 @@
   editor's background color as a `style` attribute in the HTML.
 * The Quote button removes the quote when the caret is in one, instead of nesting
   another quote inside it.
+* On Android, lists no longer come out as `<p><ol>...</ol></p>`, which is not valid
+  HTML and gained an empty paragraph before and after the list every time it was
+  loaded again.
+* Checkboxes can no longer be ticked while the editor is `readOnly`.
 * Text containing `+` (e.g. "C++") lost characters when set with `setHtml`.
 * `getHtml` no longer decodes HTML entities, which turned typed text like `<b>` into real markup.
 * Strings with quotes or backslashes (fonts, placeholder, checkbox text, `insertHtml`, ...)

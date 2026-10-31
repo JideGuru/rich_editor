@@ -245,6 +245,19 @@ describe('checkboxes', () => {
     checkbox.click();
     assert.equal(e.html(), '<p><input type="checkbox" checked="checked"></p>');
   });
+
+  it('cannot be ticked while the editor is read-only', () => {
+    e.editor.setHtml('<p><input type="checkbox"></p>');
+    e.editor.setInputEnabled(false);
+    try {
+      const checkbox = e.window.editor._textField.querySelector('input');
+      checkbox.click();
+      assert.equal(checkbox.checked, false);
+      assert.equal(e.html(), '<p><input type="checkbox"></p>');
+    } finally {
+      e.editor.setInputEnabled(true);
+    }
+  });
 });
 
 describe('style commands', () => {
@@ -385,6 +398,37 @@ describe('background color', () => {
     e.editor.setBackgroundColor('rgb(17, 20, 24)');
     assert.equal(e.window.document.body.style.backgroundColor, 'rgb(17, 20, 24)');
     assert.equal(e.window.editor._textField.style.backgroundColor, 'rgb(17, 20, 24)');
+  });
+});
+
+describe('lists', () => {
+  // Builds <p ...><ol>...</ol></p> with the DOM, as Chromium's list commands do; parsing HTML
+  // never produces it.
+  const listInParagraph = (before, after, attributes = '') => {
+    e.editor.setHtml(`<p${attributes}>${before}</p><ol><li>x</li></ol><ul><li>y</li></ul>`);
+    const field = e.window.editor._textField;
+    const paragraph = field.querySelector('p');
+    paragraph.appendChild(field.querySelector('ol'));
+    paragraph.appendChild(field.querySelector('ul'));
+    paragraph.appendChild(e.window.document.createTextNode(after));
+  };
+
+  it('are moved out of the paragraph Chromium puts them in', () => {
+    listInParagraph('', '');
+    assert.equal(e.html(), '<ol><li>x</li></ol><ul><li>y</li></ul>');
+  });
+
+  it('keep the text around them in paragraphs with the same attributes', () => {
+    listInParagraph('a', 'b', ' style="text-align: center;"');
+    assert.equal(e.html(),
+      '<p style="text-align: center;">a</p>' +
+      '<ol style="text-align: center;"><li>x</li></ol><ul style="text-align: center;"><li>y</li></ul>' +
+      '<p style="text-align: center;">b</p>');
+  });
+
+  it('are left as they are in the editor itself, so undo keeps working', () => {
+    listInParagraph('', '');
+    assert.equal(e.window.editor._textField.querySelectorAll('p > ol, p > ul').length, 2);
   });
 });
 
