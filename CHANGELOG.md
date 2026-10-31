@@ -23,6 +23,9 @@
 * `controller.getText()` returns the content as plain text.
 * The editor follows the app's light or dark theme unless `backgroundColor` /
   `baseTextColor` are set, and colors links, checkboxes and the caret to match.
+* The editor follows the app's text direction, so Arabic, Hebrew and other
+  right-to-left apps get a right-to-left editor (wrap it in a `Directionality`
+  to choose). `executor.setTextDirection` sets it directly.
 * The editor page has a Content-Security-Policy that only runs the editor's own
   scripts, so scripts and inline handlers in the content never run.
 * Colors keep their transparency; the color picker opens at the color under the cursor

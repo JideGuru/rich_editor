@@ -327,6 +327,12 @@ class JavascriptExecutorBase {
     await executeJavascript("setColorScheme(${jsonEncode(brightness.name)});");
   }
 
+  /// Lays the content out left to right or right to left (e.g. Arabic,
+  /// Hebrew).
+  Future<void> setTextDirection(TextDirection direction) async {
+    await executeJavascript("setTextDirection(${jsonEncode(direction.name)});");
+  }
+
   /// Set an image for the editor's background
   ///
   /// [image] is the image URL.

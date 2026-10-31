@@ -174,4 +174,9 @@ void main() {
     expect(_args(executor.commands[0], 'editLink'), ["https://e.com/?q='x'"]);
     expect(executor.commands[1], 'removeLink();');
   });
+
+  test('setTextDirection', () async {
+    await executor.setTextDirection(TextDirection.rtl);
+    expect(_args(executor.commands.single, 'setTextDirection'), ['rtl']);
+  });
 }

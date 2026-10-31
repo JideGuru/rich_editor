@@ -393,6 +393,19 @@ describe('links', () => {
   });
 });
 
+describe('text direction', () => {
+  it('is set on the page, not stored in the content', () => {
+    e.editor.setHtml('<p>a</p>');
+    e.editor.setTextDirection('rtl');
+    try {
+      assert.equal(e.window.document.documentElement.dir, 'rtl');
+      assert.equal(e.html(), '<p>a</p>');
+    } finally {
+      e.editor.setTextDirection('ltr');
+    }
+  });
+});
+
 describe('background color', () => {
   it('is set on the editable element too, so Chromium does not copy it into inserted content', () => {
     e.editor.setBackgroundColor('rgb(17, 20, 24)');

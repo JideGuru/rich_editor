@@ -33,6 +33,7 @@ Supports **Android** and **iOS**. The editor runs in a WebView
 - [x] Edit and remove links
 - [x] Plain text output (`getText`)
 - [x] Follows the app's light and dark theme
+- [x] Right-to-left languages (follows the app's text direction)
 - [x] Pasted HTML is sanitized, and a Content-Security-Policy blocks scripts in the content
 - [ ] Search
 

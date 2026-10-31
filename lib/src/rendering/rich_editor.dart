@@ -108,7 +108,10 @@ class RichEditorState extends State<RichEditor> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_isWebViewLoaded) _applyColors();
+    if (_isWebViewLoaded) {
+      _applyColors();
+      _applyDirection();
+    }
   }
 
   @override
@@ -364,6 +367,18 @@ class RichEditorState extends State<RichEditor> {
     }
   }
 
+  TextDirection? _appliedDirection;
+
+  /// Lays the content out in the app's text direction: right to left under
+  /// an Arabic or Hebrew locale, or inside a [Directionality] widget.
+  Future<void> _applyDirection() async {
+    if (!mounted) return;
+    final direction = Directionality.of(context);
+    if (direction == _appliedDirection) return;
+    _appliedDirection = direction;
+    await javascriptExecutor.setTextDirection(direction);
+  }
+
   /// Hooks the editor page up to [controller]. Safe to call repeatedly:
   /// both the page and the WebView report when loading finished.
   Future<void> _initializeEditor() async {
@@ -381,6 +396,8 @@ class RichEditorState extends State<RichEditor> {
       await _applyOptions();
       _appliedColors = null;
       await _applyColors();
+      _appliedDirection = null;
+      await _applyDirection();
       if (widget.readOnly) {
         await controller.executor.setInputEnabled(false);
       } else if (widget.autofocus) {

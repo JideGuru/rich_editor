@@ -989,6 +989,11 @@ var editor = {
     setColorScheme: function(scheme) {
         document.documentElement.style.colorScheme = scheme;
     },
+
+    // 'ltr' or 'rtl': which side text starts on, and where the caret goes.
+    setTextDirection: function(direction) {
+        document.documentElement.dir = direction;
+    },
     
     setBackgroundImage: function(image) {
         if(/^url\(/i.test(image)) { // already a CSS value
