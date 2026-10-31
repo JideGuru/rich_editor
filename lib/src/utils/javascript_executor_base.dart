@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:rich_editor/src/extensions/extensions.dart';
 import 'package:rich_editor/src/utils/video_url.dart';
@@ -43,15 +42,54 @@ class JavascriptExecutorBase {
   /// plain ASCII; it is returned exactly as the editor holds it, entities
   /// included. Returns an empty string while the editor is empty or not
   /// loaded yet.
-  Future<String> getCurrentHtml() async {
-    String? html = (await executeJavascript('getEncodedHtml();'))?.toString();
-    if (html == null) return '';
+  Future<String> getCurrentHtml() => _getEncoded('getEncodedHtml();');
+
+  /// The editor content as plain text, paragraphs and line breaks as new
+  /// lines.
+  Future<String> getText() => _getEncoded('getEncodedText();');
+
+  /// The content as a [Tiptap](https://tiptap.dev/docs/editor/core-concepts/schema)
+  /// (ProseMirror) JSON document: `{"type": "doc", "content": [...]}`.
+  ///
+  /// Returns a document with one empty paragraph while the editor is not
+  /// loaded yet.
+  Future<Map<String, dynamic>> getJson() async {
+    final json = await _getEncoded('getEncodedJson();');
+    if (json.isEmpty) return emptyJsonDocument;
+    return jsonDecode(json) as Map<String, dynamic>;
+  }
+
+  /// Replaces the content with a JSON document, as [getJson] returns it.
+  ///
+  /// Returns false, leaving the content as it was, when [json] has nodes,
+  /// marks or attributes the editor doesn't know, or nodes where they can't
+  /// go (e.g. text directly in the document).
+  Future<bool> setJson(Map<String, dynamic> json) async {
+    final result = await executeJavascript('setJson(${jsonEncode(json)});');
+    return result == true || result.toString() == 'true';
+  }
+
+  /// What [getJson] returns for an empty editor.
+  static const emptyJsonDocument = <String, dynamic>{
+    'type': 'doc',
+    'content': [
+      {'type': 'paragraph'}
+    ],
+  };
+
+  /// Runs [command], which returns a string encoded with
+  /// `encodeURIComponent`, so it survives every platform's bridge.
+  Future<String> _getEncoded(String command) async {
+    String? encoded = (await executeJavascript(command))?.toString();
+    if (encoded == null) return '';
     // Some platforms hand back the JS string still wrapped in quotes.
     // encodeURIComponent never emits a quote, so stripping them is safe.
-    if (html.length >= 2 && html.startsWith('"') && html.endsWith('"')) {
-      html = html.substring(1, html.length - 1);
+    if (encoded.length >= 2 &&
+        encoded.startsWith('"') &&
+        encoded.endsWith('"')) {
+      encoded = encoded.substring(1, encoded.length - 1);
     }
-    return Uri.decodeComponent(html);
+    return Uri.decodeComponent(encoded);
   }
 
   /// Whether the editor holds no text and no media.
@@ -211,6 +249,19 @@ class JavascriptExecutorBase {
         "insertLink(${jsonEncode(url)}, ${jsonEncode(title)});");
   }
 
+  /// Changes the URL of the link the caret is in.
+  ///
+  /// Unsafe URLs such as `javascript:` are ignored by the editor.
+  Future<void> editLink(String url) async {
+    if (url.isEmpty) return;
+    await executeJavascript("editLink(${jsonEncode(url)});");
+  }
+
+  /// Removes the link the caret is in, keeping its text.
+  Future<void> removeLink() async {
+    await executeJavascript("removeLink();");
+  }
+
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
   /// Rotation can be one of the following values: 0, 90, 180, 270.
   Future<void> insertImage(
@@ -280,11 +331,12 @@ class JavascriptExecutorBase {
   }
 
   // Editor settings commands
-  /// Focus on editor and bring up keyboard
+  /// Focuses the editor, with the caret at the end, and opens the keyboard.
+  ///
+  /// Android only opens the keyboard once the user has interacted with the
+  /// editor page, e.g. tapped it; until then only the caret is placed.
   Future<void> focus() async {
     await executeJavascript("focus();");
-    // Focusing from script doesn't open the keyboard on all platforms.
-    await SystemChannels.textInput.invokeMethod<void>('TextInput.show');
   }
 
   /// Remove focus from the editor and close the keyboard
@@ -296,6 +348,18 @@ class JavascriptExecutorBase {
   Future<void> setBackgroundColor(Color color) async {
     await executeJavascript(
         "setBackgroundColor(${jsonEncode(color.toCssColorString())});");
+  }
+
+  /// Colors links, checkboxes, the caret and selections for a light or dark
+  /// background.
+  Future<void> setColorScheme(Brightness brightness) async {
+    await executeJavascript("setColorScheme(${jsonEncode(brightness.name)});");
+  }
+
+  /// Lays the content out left to right or right to left (e.g. Arabic,
+  /// Hebrew).
+  Future<void> setTextDirection(TextDirection direction) async {
+    await executeJavascript("setTextDirection(${jsonEncode(direction.name)});");
   }
 
   /// Set an image for the editor's background

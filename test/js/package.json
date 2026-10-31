@@ -1,0 +1,11 @@
+{
+  "name": "rich-editor-js-tests",
+  "private": true,
+  "description": "Tests for assets/editor/rich_text_editor.js, run with `npm test` in this folder.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

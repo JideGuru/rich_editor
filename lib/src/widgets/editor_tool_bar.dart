@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -98,8 +99,9 @@ class EditorToolBar extends StatelessWidget {
                 tooltip: labels.tooltip(item),
                 icon: _icon(item),
                 selected: _isSelected(item),
-                disabled: item == ToolbarItem.video && disableVideo,
-                onTap: () => _onTap(context, item),
+                disabled: !_canUse(item) ||
+                    (item == ToolbarItem.video && disableVideo),
+                onTap: _canUse(item) ? () => _onTap(context, item) : null,
               ),
         ],
       ),
@@ -115,6 +117,15 @@ class EditorToolBar extends StatelessWidget {
     };
   }
 
+  /// False while there is nothing to undo or redo.
+  bool _canUse(ToolbarItem item) {
+    return switch (item) {
+      ToolbarItem.undo => commandStates[EditorCommand.undo]?.enabled ?? true,
+      ToolbarItem.redo => commandStates[EditorCommand.redo]?.enabled ?? true,
+      _ => true,
+    };
+  }
+
   bool _isActive(String command) => commandStates[command]?.active ?? false;
 
   String _blockFormat() =>
@@ -123,6 +134,7 @@ class EditorToolBar extends StatelessWidget {
   bool _isSelected(ToolbarItem item) {
     return switch (item) {
       ToolbarItem.bold => _isActive(EditorCommand.bold),
+      ToolbarItem.link => _isActive(EditorCommand.link),
       ToolbarItem.italic => _isActive(EditorCommand.italic),
       ToolbarItem.underline => _isActive(EditorCommand.underline),
       ToolbarItem.strikeThrough => _isActive(EditorCommand.strikeThrough),
@@ -180,12 +192,7 @@ class EditorToolBar extends StatelessWidget {
       case ToolbarItem.italic:
         await executor.setItalic();
       case ToolbarItem.link:
-        final link = await showDialog<({String url, String label})>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => InsertLinkDialog(labels: labels),
-        );
-        if (link != null) await executor.insertLink(link.url, link.label);
+        await _insertOrEditLink(context);
       case ToolbarItem.image:
         await _insertImage(context);
       case ToolbarItem.video:
@@ -209,7 +216,12 @@ class EditorToolBar extends StatelessWidget {
       case ToolbarItem.redo:
         await executor.redo();
       case ToolbarItem.blockquote:
-        await executor.setBlockQuote();
+        // a toggle: applying it again would nest another quote
+        if (_isSelected(ToolbarItem.blockquote)) {
+          await executor.setFormattingToParagraph();
+        } else {
+          await executor.setBlockQuote();
+        }
       case ToolbarItem.textFormat:
         final format = await showDialog<BlockFormat>(
           context: context,
@@ -282,6 +294,25 @@ class EditorToolBar extends StatelessWidget {
     );
   }
 
+  /// Inserts a link, or edits or removes the one the caret is in.
+  Future<void> _insertOrEditLink(BuildContext context) async {
+    final current = commandStates[EditorCommand.link];
+    final editedUrl = current?.active ?? false ? current!.value : null;
+    final result = await showDialog<InsertLinkResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => InsertLinkDialog(labels: labels, url: editedUrl),
+    );
+    if (result == null) return;
+    if (result.remove) {
+      await javascriptExecutor.removeLink();
+    } else if (editedUrl != null) {
+      await javascriptExecutor.editLink(result.url);
+    } else {
+      await javascriptExecutor.insertLink(result.url, result.label);
+    }
+  }
+
   Future<void> _insertImage(BuildContext context) async {
     final result = await showDialog<InsertMediaResult>(
       context: context,
@@ -289,14 +320,19 @@ class EditorToolBar extends StatelessWidget {
     );
     if (result == null || result.url.isEmpty) return;
 
-    final url = await _upload(result, getImageUrl);
+    final url = await _upload(result, getImageUrl ?? _imageDataUrl);
     if (url != null) await javascriptExecutor.insertImage(url, alt: result.alt);
   }
 
   Future<void> _insertVideo(BuildContext context) async {
     final result = await showDialog<InsertMediaResult>(
       context: context,
-      builder: (_) => InsertImageDialog(isVideo: true, labels: labels),
+      builder: (_) => InsertImageDialog(
+        isVideo: true,
+        labels: labels,
+        // the editor page can't play videos from the device
+        canPick: getVideoUrl != null,
+      ),
     );
     if (result == null || result.url.isEmpty) return;
 
@@ -307,6 +343,17 @@ class EditorToolBar extends StatelessWidget {
       url,
       fromDevice: result.picked || youtubeEmbedUrl(url) == null,
     );
+  }
+
+  /// Embeds a picked image without [getImageUrl]: the editor page can't
+  /// load device files, and the HTML stays usable on other devices.
+  static Future<String> _imageDataUrl(File image) async {
+    final extension = image.path.split('.').last.toLowerCase();
+    final type = switch (extension) {
+      'png' || 'gif' || 'webp' || 'bmp' => extension,
+      _ => 'jpeg',
+    };
+    return 'data:image/$type;base64,${base64Encode(await image.readAsBytes())}';
   }
 
   /// Uploads picked media with [upload], if given. Returns the URL to

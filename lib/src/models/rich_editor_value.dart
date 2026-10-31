@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 /// Names of the editing commands whose state the editor reports.
 ///
-/// These are the `document.execCommand` names the editor uses.
+/// These are the `document.execCommand` names the editor uses, plus [link].
 abstract final class EditorCommand {
   static const undo = 'undo';
   static const redo = 'redo';
@@ -23,6 +23,9 @@ abstract final class EditorCommand {
   static const justifyFull = 'justifyFull';
   static const insertUnorderedList = 'insertUnorderedList';
   static const insertOrderedList = 'insertOrderedList';
+
+  /// Active while the caret is in a link; the value is the link's URL.
+  static const link = 'link';
 }
 
 /// State of one editing command at the current selection.

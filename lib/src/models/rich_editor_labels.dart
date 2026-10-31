@@ -39,6 +39,7 @@ class RichEditorLabels {
     this.linkHint = 'type link here',
     this.linkLabel = 'Label',
     this.linkLabelHint = 'type label text here',
+    this.removeLink = 'Remove link',
     this.imageLink = 'Image link',
     this.videoLink = 'Video link',
     this.pickFromGallery = 'Pick from gallery',
@@ -95,6 +96,7 @@ class RichEditorLabels {
   final String linkHint;
   final String linkLabel;
   final String linkLabelHint;
+  final String removeLink;
   final String imageLink;
   final String videoLink;
   final String pickFromGallery;

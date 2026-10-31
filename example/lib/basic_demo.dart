@@ -12,6 +12,7 @@ class BasicDemo extends StatefulWidget {
 
 class _BasicDemoState extends State<BasicDemo> {
   final _controller = RichEditorController();
+  bool _readOnly = false;
 
   @override
   void dispose() {
@@ -25,11 +26,17 @@ class _BasicDemoState extends State<BasicDemo> {
       appBar: AppBar(
         title: const Text('Basic Demo'),
         actions: [
+          IconButton(
+            tooltip: _readOnly ? 'Edit' : 'Read only',
+            icon: Icon(_readOnly ? Icons.edit : Icons.lock_outline),
+            onPressed: () => setState(() => _readOnly = !_readOnly),
+          ),
           PopupMenuButton<int>(
             icon: const Icon(Icons.more_vert),
             itemBuilder: (context) {
               return const [
                 PopupMenuItem(value: 0, child: Text('Get HTML')),
+                PopupMenuItem(value: 5, child: Text('Get text')),
                 PopupMenuItem(value: 1, child: Text('Set HTML')),
                 PopupMenuItem(value: 2, child: Text('Clear content')),
                 PopupMenuItem(value: 3, child: Text('Hide keyboard')),
@@ -49,6 +56,9 @@ class _BasicDemoState extends State<BasicDemo> {
                   await _controller.unFocus();
                 case 4:
                   await _controller.focus();
+                case 5:
+                  final text = await _controller.getText();
+                  debugPrint('Current text: $text');
               }
             },
           ),
@@ -56,6 +66,7 @@ class _BasicDemoState extends State<BasicDemo> {
       ),
       body: RichEditor(
         controller: _controller,
+        readOnly: _readOnly,
         // initial HTML data
         value: '''
         <p>Hello, This is a rich text Editor for Flutter. It supports most things like Bold, italics and underline.</p>

@@ -82,3 +82,6 @@ build/
 
 # Libraries should not pin their dependencies
 /pubspec.lock
+
+# Kotlin compiler caches
+**/android/.kotlin/

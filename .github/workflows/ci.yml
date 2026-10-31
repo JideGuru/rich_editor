@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test example/lib example/test
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter pub get && flutter analyze && flutter test
+        working-directory: example
+
+  editor-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # assets/editor/editor.js is built from tool/editor and committed
+      - run: npm ci && npm run check
+        working-directory: tool/editor
+      - run: npm ci && npm test
+        working-directory: test/js

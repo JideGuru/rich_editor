@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -24,7 +26,13 @@ class RichEditor extends StatefulWidget {
   /// Initial HTML. Changing it replaces the editor content.
   final String? value;
   final RichEditorOptions editorOptions;
+
+  /// Uploads an image the user picked, pasted or dropped, and returns its
+  /// URL. Without it, images are embedded in the HTML as `data:` URLs.
   final Future<String> Function(File image)? getImageUrl;
+
+  /// Uploads a video the user picked and returns its URL. Needed to insert
+  /// picked videos: the editor page can't play files from the device.
   final Future<String> Function(File video)? getVideoUrl;
   final bool disableVideo;
   final VoidCallback? onDisabledVideoTap;
@@ -40,6 +48,13 @@ class RichEditor extends StatefulWidget {
   /// [RichEditorOptions.barPosition]. Ignored for [BarPosition.custom].
   final RichEditorToolbarBuilder? toolbarBuilder;
 
+  /// Shows the content without letting the user edit it, and hides the
+  /// toolbar. Checkboxes cannot be ticked either.
+  final bool readOnly;
+
+  /// Focuses the editor, showing the keyboard, once it has loaded.
+  final bool autofocus;
+
   const RichEditor({
     super.key,
     this.controller,
@@ -52,6 +67,8 @@ class RichEditor extends StatefulWidget {
     this.onChanged,
     this.onUploadError,
     this.toolbarBuilder,
+    this.readOnly = false,
+    this.autofocus = false,
   });
 
   @override
@@ -74,8 +91,9 @@ class RichEditorState extends State<RichEditor> {
 
   JavascriptExecutorBase get javascriptExecutor => controller.executor;
 
-  // Android loads the editor from its APK assets; elsewhere it is served
-  // over http://localhost, which gives embedded videos a proper origin.
+  // Android serves the APK assets under an https origin with
+  // WebViewAssetLoader; elsewhere they are served over http://localhost.
+  // Either way the page gets a real origin, which YouTube embeds require.
   bool get _usesLocalServer => !Platform.isAndroid;
 
   @override
@@ -84,6 +102,15 @@ class RichEditorState extends State<RichEditor> {
     if (_usesLocalServer) {
       _localServer = LocalServer();
       _localServer!.start().ignore(); // a failure surfaces when loading
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isWebViewLoaded) {
+      _applyColors();
+      _applyDirection();
     }
   }
 
@@ -111,6 +138,10 @@ class RichEditorState extends State<RichEditor> {
     }
     if (widget.editorOptions != oldWidget.editorOptions) {
       _applyOptions(oldWidget.editorOptions);
+      _applyColors();
+    }
+    if (widget.readOnly != oldWidget.readOnly) {
+      javascriptExecutor.setInputEnabled(!widget.readOnly);
     }
   }
 
@@ -139,7 +170,8 @@ class RichEditorState extends State<RichEditor> {
         return;
       }
     } else {
-      url = WebUri('file:///android_asset/flutter_assets/$_assetPath');
+      url = WebUri('https://${WebViewAssetLoader.DEFAULT_DOMAIN}'
+          '/assets/flutter_assets/$_assetPath');
     }
     if (!mounted) return;
     await webViewController.loadUrl(urlRequest: URLRequest(url: url));
@@ -148,7 +180,7 @@ class RichEditorState extends State<RichEditor> {
   @override
   Widget build(BuildContext context) {
     final options = widget.editorOptions;
-    final toolbar = options.barPosition == BarPosition.custom
+    final toolbar = options.barPosition == BarPosition.custom || widget.readOnly
         ? null
         : widget.toolbarBuilder?.call(context, controller) ?? _buildToolBar();
 
@@ -156,7 +188,8 @@ class RichEditorState extends State<RichEditor> {
       children: [
         Column(
           children: [
-            if (options.barPosition == BarPosition.top) toolbar!,
+            if (toolbar != null && options.barPosition == BarPosition.top)
+              toolbar,
             Expanded(
               child: InAppWebView(
                 initialSettings: InAppWebViewSettings(
@@ -168,6 +201,13 @@ class RichEditorState extends State<RichEditor> {
                   allowsLinkPreview: false,
                   isFraudulentWebsiteWarningEnabled: false,
                   disallowOverScroll: true,
+                  // no white flash before the editor colors are applied
+                  transparentBackground: true,
+                  webViewAssetLoader: _usesLocalServer
+                      ? null
+                      : WebViewAssetLoader(
+                          pathHandlers: [AssetsPathHandler(path: '/assets/')],
+                        ),
                 ),
                 onWebViewCreated: (webViewController) async {
                   _webViewController = webViewController;
@@ -178,6 +218,10 @@ class RichEditorState extends State<RichEditor> {
                   webViewController.addJavaScriptHandler(
                     handlerName: 'editorStateChanged',
                     callback: _handleEditorStateChanged,
+                  );
+                  webViewController.addJavaScriptHandler(
+                    handlerName: 'imagePasted',
+                    callback: _handlePastedImage,
                   );
                   await _loadEditor(webViewController);
                 },
@@ -196,7 +240,8 @@ class RichEditorState extends State<RichEditor> {
                     : null,
               ),
             ),
-            if (options.barPosition == BarPosition.bottom) toolbar!,
+            if (toolbar != null && options.barPosition == BarPosition.bottom)
+              toolbar,
           ],
         ),
         // Media upload loading overlay
@@ -279,19 +324,11 @@ class RichEditorState extends State<RichEditor> {
   Future<void> _applyOptions([RichEditorOptions? old]) async {
     final options = widget.editorOptions;
     final executor = javascriptExecutor;
-    final background = options.backgroundColor;
-    final textColor = options.baseTextColor;
     final padding = options.padding;
     final fontFamily = options.baseFontFamily;
 
     if (padding != null && padding != old?.padding) {
       await executor.setPadding(padding);
-    }
-    if (background != null && background != old?.backgroundColor) {
-      await executor.setBackgroundColor(background);
-    }
-    if (textColor != null && textColor != old?.baseTextColor) {
-      await executor.setBaseTextColor(textColor);
     }
     if (old == null || options.placeholder != old.placeholder) {
       await executor.setPlaceholder(options.placeholder ?? '');
@@ -299,6 +336,47 @@ class RichEditorState extends State<RichEditor> {
     if (fontFamily != null && fontFamily != old?.baseFontFamily) {
       await executor.setBaseFontFamily(fontFamily);
     }
+  }
+
+  /// The colors last sent to the editor page, so unchanged ones aren't sent
+  /// again.
+  ({Color background, Color text})? _appliedColors;
+
+  /// Colors the editor with [RichEditorOptions.backgroundColor] and
+  /// [RichEditorOptions.baseTextColor], or else the app's theme.
+  Future<void> _applyColors() async {
+    if (!mounted) return;
+    final options = widget.editorOptions;
+    final scheme = Theme.of(context).colorScheme;
+    final colors = (
+      background: options.backgroundColor ?? scheme.surface,
+      text: options.baseTextColor ?? scheme.onSurface,
+    );
+    final applied = _appliedColors;
+    if (colors == applied) return;
+    _appliedColors = colors;
+
+    final executor = javascriptExecutor;
+    if (colors.background != applied?.background) {
+      await executor.setBackgroundColor(colors.background);
+      await executor.setColorScheme(
+          ThemeData.estimateBrightnessForColor(colors.background));
+    }
+    if (colors.text != applied?.text) {
+      await executor.setBaseTextColor(colors.text);
+    }
+  }
+
+  TextDirection? _appliedDirection;
+
+  /// Lays the content out in the app's text direction: right to left under
+  /// an Arabic or Hebrew locale, or inside a [Directionality] widget.
+  Future<void> _applyDirection() async {
+    if (!mounted) return;
+    final direction = Directionality.of(context);
+    if (direction == _appliedDirection) return;
+    _appliedDirection = direction;
+    await javascriptExecutor.setTextDirection(direction);
   }
 
   /// Hooks the editor page up to [controller]. Safe to call repeatedly:
@@ -312,10 +390,22 @@ class RichEditorState extends State<RichEditor> {
     try {
       final controller = this.controller;
       controller.executor.init(webViewController);
-      final pendingHtml = controller.markReady();
-      final html = pendingHtml ?? widget.value;
-      if (html != null) await controller.executor.setHtml(html);
+      switch (controller.markReady() ?? widget.value) {
+        case final String html:
+          await controller.executor.setHtml(html);
+        case final Map<String, dynamic> json:
+          await controller.executor.setJson(json);
+      }
       await _applyOptions();
+      _appliedColors = null;
+      await _applyColors();
+      _appliedDirection = null;
+      await _applyDirection();
+      if (widget.readOnly) {
+        await controller.executor.setInputEnabled(false);
+      } else if (widget.autofocus) {
+        await controller.focus();
+      }
       if (mounted) setState(() => _isWebViewLoaded = true);
     } finally {
       _isInitializing = false;
@@ -349,11 +439,59 @@ class RichEditorState extends State<RichEditor> {
     }
   }
 
+  /// Inserts an image the user pasted or dropped into the editor, uploading
+  /// it with [RichEditor.getImageUrl] if given.
+  Future<void> _handlePastedImage(List<dynamic> arguments) async {
+    final data = arguments.isEmpty ? null : arguments.first;
+    if (data is! Map) return;
+    final base64Data = data['data'];
+    final type = data['type'];
+    if (base64Data is! String || type is! String) return;
+
+    var url = 'data:$type;base64,$base64Data';
+    if (widget.getImageUrl != null) {
+      Directory? directory;
+      try {
+        directory = await Directory.systemTemp.createTemp('rich_editor');
+        final extension =
+            type.split('/').last.replaceAll(RegExp('[^a-z0-9]'), '');
+        final file = File('${directory.path}/pasted_image.$extension');
+        await file.writeAsBytes(base64Decode(base64Data));
+        url = await uploadImageWithLoader(file);
+      } catch (error, stackTrace) {
+        _reportUploadError(error, stackTrace);
+        return;
+      } finally {
+        directory?.delete(recursive: true).ignore();
+      }
+    }
+
+    // Shown at most 300 pixels wide, like picked images, without distortion.
+    final width = data['width'];
+    final height = data['height'];
+    if (width is num && height is num && width > 0 && height > 0) {
+      final scale = math.min(1, 300 / width);
+      await javascriptExecutor.insertImage(
+        url,
+        width: (width * scale).round(),
+        height: (height * scale).round(),
+      );
+    } else {
+      await javascriptExecutor.insertImage(url);
+    }
+  }
+
   /// Get current HTML from editor
   Future<String?> getHtml() => controller.getHtml();
 
   /// Set your HTML to the editor
   Future<void> setHtml(String html) => controller.setHtml(html);
+
+  /// The content as a Tiptap (ProseMirror) JSON document.
+  Future<Map<String, dynamic>> getJson() => controller.getJson();
+
+  /// Replaces the content with a JSON document; false if it doesn't fit.
+  Future<bool> setJson(Map<String, dynamic> json) => controller.setJson(json);
 
   /// Hide the keyboard using JavaScript since it's being opened in a WebView
   /// https://stackoverflow.com/a/8263376/10835183

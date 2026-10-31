@@ -160,4 +160,68 @@ void main() {
       expect(await executor.getCurrentHtml(), '');
     });
   });
+
+  test('getText reads the encoded text', () async {
+    executor.result = Uri.encodeComponent("C++ it's\nline 2");
+    expect(await executor.getText(), "C++ it's\nline 2");
+    expect(executor.commands.single, 'getEncodedText();');
+  });
+
+  test('editLink and removeLink', () async {
+    await executor.editLink('');
+    await executor.editLink("https://e.com/?q='x'");
+    await executor.removeLink();
+    expect(_args(executor.commands[0], 'editLink'), ["https://e.com/?q='x'"]);
+    expect(executor.commands[1], 'removeLink();');
+  });
+
+  group('JSON', () {
+    test('getJson decodes the encoded document', () async {
+      const json = {
+        'type': 'doc',
+        'content': [
+          {
+            'type': 'paragraph',
+            'content': [
+              {'type': 'text', 'text': "C++ it's \"100%\""}
+            ]
+          }
+        ]
+      };
+      executor.result = Uri.encodeComponent(jsonEncode(json));
+      expect(await executor.getJson(), json);
+      expect(executor.commands.single, 'getEncodedJson();');
+    });
+
+    test('getJson is an empty document before the WebView is ready', () async {
+      executor.result = null;
+      expect(
+          await executor.getJson(), JavascriptExecutorBase.emptyJsonDocument);
+    });
+
+    test('setJson passes the document as a literal and reads the result',
+        () async {
+      const json = {
+        'type': 'doc',
+        'content': [
+          {
+            'type': 'paragraph',
+            'content': [
+              {'type': 'text', 'text': '</script>\'); alert(1); (\''}
+            ]
+          }
+        ]
+      };
+      executor.result = true;
+      expect(await executor.setJson(json), isTrue);
+      expect(_args(executor.commands.single, 'setJson'), [json]);
+      executor.result = false;
+      expect(await executor.setJson(json), isFalse);
+    });
+  });
+
+  test('setTextDirection', () async {
+    await executor.setTextDirection(TextDirection.rtl);
+    expect(_args(executor.commands.single, 'setTextDirection'), ['rtl']);
+  });
 }

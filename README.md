@@ -6,8 +6,10 @@ WYSIWYG editor for Flutter with a rich set of supported formatting options.
 
 Based on https://github.com/dankito/RichTextEditor, but for Flutter.
 
-Supports **Android** and **iOS**. The editor runs in a WebView
-([flutter_inappwebview](https://pub.dev/packages/flutter_inappwebview)).
+Supports **Android** and **iOS**. The editor is [Tiptap](https://tiptap.dev)
+(ProseMirror) running in a WebView
+([flutter_inappwebview](https://pub.dev/packages/flutter_inappwebview)). It
+needs iOS 14.5 or later, and Android System WebView 80 or later.
 
 ## ✨ Features
 
@@ -22,14 +24,20 @@ Supports **Android** and **iOS**. The editor runs in a WebView
 - [x] Undo, Redo
 - [x] Unordered List (Bullets)
 - [x] Ordered List (Numbers)
-- [x] Insert local or remote Image
+- [x] Insert local or remote Image, or paste one
 - [x] Insert video (YouTube links or video files)
 - [x] Insert Link
 - [x] Insert Checkbox
 - [x] Toolbar highlights active formatting
 - [x] Change notifications (`onChanged`) and a controller
 - [x] Customizable and localizable toolbar
-- [x] Pasted HTML is sanitized
+- [x] Read-only mode
+- [x] Edit and remove links
+- [x] Plain text output (`getText`)
+- [x] JSON output (`getJson` / `setJson`)
+- [x] Follows the app's light and dark theme
+- [x] Right-to-left languages (follows the app's text direction)
+- [x] Pasted HTML is sanitized, and a Content-Security-Policy blocks scripts in the content
 - [ ] Search
 
 ## 📸 Screenshots
@@ -58,8 +66,8 @@ RichEditor(
   ),
   // Called with the new HTML whenever the user edits
   onChanged: (html) => print(html),
-  // Return a link for a picked image: upload it to your storage first,
-  // or use a data URI.
+  // Return a link for a picked, pasted or dropped image: upload it to your
+  // storage first, or use a data URI.
   getImageUrl: (image) async {
     final base64 = base64Encode(await image.readAsBytes());
     return 'data:image/png;base64,$base64';
@@ -70,11 +78,34 @@ RichEditor(
 
 Dispose the controller when you're done with it.
 
-Get or set the HTML
+Set `readOnly: true` to show the content without the toolbar and without
+letting the user edit it, and `autofocus: true` to focus the editor once it has
+loaded. Android only opens the keyboard from code once the user has interacted
+with the editor; before that, `focus()` places the caret.
+
+Without `getImageUrl`, picked and pasted images are embedded in the HTML as
+`data:` URLs. Picking videos from the gallery needs `getVideoUrl`.
+
+Get or set the HTML, or get the plain text
 
 ```dart
 String html = await controller.getHtml(); // empty when the editor is empty
 await controller.setHtml('<p>Hello</p>');
+String text = await controller.getText(); // paragraphs on their own lines
+```
+
+The HTML is the editor's own: whatever you set is parsed into the editor's
+document, so markup it has no formatting for is dropped and the rest comes
+back in one consistent form (e.g. `<b>` comes back as `<strong>`, `<font>` as a
+styled `<span>`).
+
+Or store the content as JSON, the
+[Tiptap / ProseMirror document](https://tiptap.dev/docs/editor/core-concepts/schema),
+which other Tiptap and ProseMirror editors and renderers read as well:
+
+```dart
+Map<String, dynamic> json = await controller.getJson();
+bool ok = await controller.setJson(json); // false if it doesn't fit the editor
 ```
 
 Set Focus and Unfocus
@@ -144,6 +175,23 @@ library usage description in `Info.plist`).
 On iOS the editor is served from `http://localhost` inside your app. If
 App Transport Security blocks it, set `NSAllowsLocalNetworking` to `true`
 under `NSAppTransportSecurity` in `Info.plist`.
+
+## Development
+
+```bash
+flutter test                       # the Dart package
+(cd test/js && npm ci && npm test) # the editor JavaScript, in jsdom
+```
+
+The editor page runs `assets/editor/editor.js`, which is bundled from
+`tool/editor/src`. After changing the sources, rebuild it and commit both:
+
+```bash
+(cd tool/editor && npm ci && npm run build)
+```
+
+CI runs the tests, checks the bundle matches its sources, and runs
+`dart format` and `flutter analyze`, on every pull request.
 
 ## License
 

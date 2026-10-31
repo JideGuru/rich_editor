@@ -7,12 +7,16 @@ class CustomDialogTemplate extends StatelessWidget {
   final VoidCallback onCancel;
   final RichEditorLabels labels;
 
+  /// Shown before Cancel and Done.
+  final List<Widget> extraActions;
+
   const CustomDialogTemplate({
     super.key,
     required this.body,
     required this.onDone,
     required this.onCancel,
     this.labels = const RichEditorLabels(),
+    this.extraActions = const [],
   });
 
   @override
@@ -26,6 +30,7 @@ class CustomDialogTemplate extends StatelessWidget {
         ),
       ),
       actions: [
+        ...extraActions,
         TextButton(
           onPressed: onCancel,
           child: Text(labels.cancel),

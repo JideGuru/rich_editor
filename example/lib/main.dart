@@ -14,6 +14,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'rich_editor demo',
       theme: ThemeData(colorSchemeSeed: Colors.blue),
+      // the editor follows the app's light or dark theme
+      darkTheme: ThemeData(
+        colorSchemeSeed: Colors.blue,
+        brightness: Brightness.dark,
+      ),
       home: const _DemoList(),
     );
   }

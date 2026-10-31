@@ -1,6 +1,15 @@
 ## Unreleased
 
 ### Added
+* The editor runs on [Tiptap](https://tiptap.dev) (ProseMirror) instead of the
+  browser's `contenteditable` commands, so it behaves the same on Android and iOS
+  and its HTML is clean and stable: no `<p><ol>` lists, leaked styles or zero-width
+  spaces. The Dart API, toolbar and command states are unchanged.
+* JSON output: `controller.getJson()` / `setJson()` (and on the executor and
+  `RichEditorState`) read and set the content as a Tiptap / ProseMirror JSON
+  document (#33).
+* Typed and pasted web addresses become links.
+* Indent nests list items; elsewhere it indents paragraphs and headings.
 * `onChanged` callback: the editor now reports every content change to Flutter.
 * `RichEditorController`: read and set HTML, focus, clear and run commands
   (`controller.executor`) without a `GlobalKey`. It is a `ValueListenable` of
@@ -12,10 +21,36 @@
 * `RichEditor.onUploadError` is called when `getImageUrl` / `getVideoUrl` throws;
   nothing is inserted then.
 * The placeholder is shown while the editor is empty.
+* `RichEditor.readOnly` shows the content without the toolbar and without letting
+  the user edit it; `RichEditor.autofocus` focuses the editor once it has loaded.
+* Pasted and dropped images are uploaded with `getImageUrl` (or inserted as `data:`
+  URLs without it), at the caret and without distortion.
+* Undo and Redo are greyed out when there is nothing to undo or redo.
+* Links can be edited and removed: the Link button is highlighted while the caret is
+  in a link and opens it for editing. `executor.editLink` / `removeLink`, and
+  `EditorCommand.link` reports the link at the caret.
+* `controller.getText()` returns the content as plain text.
+* The editor follows the app's light or dark theme unless `backgroundColor` /
+  `baseTextColor` are set, and colors links, checkboxes and the caret to match.
+* The editor follows the app's text direction, so Arabic, Hebrew and other
+  right-to-left apps get a right-to-left editor (wrap it in a `Directionality`
+  to choose). `executor.setTextDirection` sets it directly.
+* The editor page has a Content-Security-Policy that only runs the editor's own
+  scripts, so scripts and inline handlers in the content never run.
 * Colors keep their transparency; the color picker opens at the color under the cursor
   and has a Cancel button.
 
 ### Fixed
+* On iOS, inserted links, images and the text around them no longer get a
+  `style="-webkit-text-size-adjust: 100%;"` attribute in the HTML.
+* On Android, links and images inserted at the end of a paragraph no longer get the
+  editor's background color as a `style` attribute in the HTML.
+* The Quote button removes the quote when the caret is in one, instead of nesting
+  another quote inside it.
+* On Android, lists no longer come out as `<p><ol>...</ol></p>`, which is not valid
+  HTML and gained an empty paragraph before and after the list every time it was
+  loaded again.
+* Checkboxes can no longer be ticked while the editor is `readOnly`.
 * Text containing `+` (e.g. "C++") lost characters when set with `setHtml`.
 * `getHtml` no longer decodes HTML entities, which turned typed text like `<b>` into real markup.
 * Strings with quotes or backslashes (fonts, placeholder, checkbox text, `insertHtml`, ...)
@@ -43,12 +78,43 @@
   when its port was taken, used a fixed port shared by all editors, and served every app asset.
   It now uses a free port and only serves the editor files.
 * Changing `value` or `editorOptions` after the first build had no effect.
+* `focus()` opened the keyboard for Flutter's own text input, which had no text field,
+  instead of the editor. This is behind reports of the cursor disappearing (#13), Samsung
+  keyboards failing with Vietnamese (#15) and crashes in `onCreateInputConnection` (#22).
+  The keyboard is now opened for the editor itself, on Android once the user has
+  interacted with the editor.
+* The editor no longer changes the page while the keyboard composes a word, which
+  cancelled composing input (Vietnamese, Chinese, Japanese, swipe typing).
+* Dragging across an image didn't scroll the editor. Images now take touches for
+  resizing and rotating only once tapped, and are outlined then.
+* Android: YouTube embeds failed with "Error 153", because the editor page had no
+  origin. Android now serves the editor under `https://appassets.androidplatform.net`
+  with `WebViewAssetLoader`, instead of loading it from `file:///android_asset`.
+* Typing in large documents sent the whole HTML to Flutter on every keystroke and
+  selection change; reports are now batched (at most every 50 ms, less often for
+  large documents).
 * `setState` after dispose when an upload finished late.
 * Dialog text fields leaked their controllers.
 * The editor no longer forces mixed content on, and only logs WebView console
   messages in debug builds.
 
 ### Breaking
+* HTML is parsed into the editor's document, so `getHtml` returns the editor's own
+  form of what was set: `<b>` becomes `<strong>`, `<i>` `<em>`, `<strike>` `<s>`,
+  `<font>` a styled `<span>`, `<pre>` `<pre><code>`, list items hold paragraphs, and
+  markup the editor has no formatting for (tables, classes, most inline styles) is
+  dropped. HTML saved by earlier versions loads with its formatting, including
+  images' size and rotation, checkboxes, videos and indents (which become
+  `margin-inline-start` instead of a blockquote).
+* `setHtml` cannot be undone, and font sizes are CSS keywords (`x-large`) rather
+  than `<font size>`; the `fontSize` command state still reports 1 - 7.
+* Needs iOS 14.5 or later and Android System WebView 80 or later.
+* `RichEditorController.markReady` (internal) returns the pending content as an
+  HTML `String` or a JSON `Map`.
+* Without `getImageUrl`, picked images are embedded as `data:` URLs instead of being
+  inserted by their file path, which the editor page can no longer load (and never
+  could on iOS). Picking videos needs `getVideoUrl`; without it the video dialog
+  only takes links.
 * `RichEditor.editorOptions` and `RichEditor.disableVideo` are non-nullable;
   `RichEditorOptions` is immutable with `barPosition` defaulting to `BarPosition.top`.
 * Executor methods return `Future<void>` (`getCurrentHtml` returns `Future<String>`),

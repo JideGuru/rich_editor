@@ -70,6 +70,50 @@ void main() {
     });
   });
 
+  testWidgets('the quote button toggles the quote', (tester) async {
+    Future<void> tapQuote(String blockFormat) async {
+      await tester.pumpWidget(_app(EditorToolBar(
+        javascriptExecutor: executor,
+        isWebViewLoaded: true,
+        items: const [ToolbarItem.blockquote],
+        commandStates: {
+          EditorCommand.formatBlock: CommandState(value: blockFormat),
+        },
+      )));
+      await tester.tap(find.byIcon(Icons.format_quote));
+    }
+
+    await tapQuote('p');
+    await tapQuote('blockquote');
+    expect(executor.commands, [
+      'setBlockQuote();',
+      'setFormattingToParagraph();',
+    ]);
+  });
+
+  testWidgets('greys out undo and redo while there is nothing to undo',
+      (tester) async {
+    await tester.pumpWidget(_app(EditorToolBar(
+      javascriptExecutor: executor,
+      isWebViewLoaded: true,
+      items: const [ToolbarItem.undo, ToolbarItem.redo],
+      commandStates: const {
+        EditorCommand.undo: CommandState(enabled: false),
+        EditorCommand.redo: CommandState(enabled: true),
+      },
+    )));
+
+    final disabled = {
+      for (final b in tester.widgetList<TabButton>(find.byType(TabButton)))
+        b.tooltip: b.disabled,
+    };
+    expect(disabled, {'Undo': true, 'Redo': false});
+
+    await tester.tap(find.byIcon(Icons.undo));
+    await tester.tap(find.byIcon(Icons.redo));
+    expect(executor.commands, ['redo();']);
+  });
+
   testWidgets('uses custom labels', (tester) async {
     await tester.pumpWidget(_app(EditorToolBar(
       javascriptExecutor: executor,
@@ -115,6 +159,41 @@ void main() {
     expect(executor.commands, ['insertLink("https://e.com", "it\'s");']);
   });
 
+  group('with the caret in a link', () {
+    Future<void> openLinkDialog(WidgetTester tester) async {
+      await tester.pumpWidget(_app(EditorToolBar(
+        javascriptExecutor: executor,
+        isWebViewLoaded: true,
+        items: const [ToolbarItem.link],
+        commandStates: const {
+          EditorCommand.link:
+              CommandState(active: true, value: 'https://a.com'),
+        },
+      )));
+      expect(tester.widget<TabButton>(find.byType(TabButton)).selected, true);
+      await tester.tap(find.byType(TabButton));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('edits its URL', (tester) async {
+      await openLinkDialog(tester);
+      expect(find.byType(TextField), findsOneWidget); // no label to enter
+      expect(find.text('https://a.com'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'https://b.com');
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(executor.commands, ['editLink("https://b.com");']);
+    });
+
+    testWidgets('removes it', (tester) async {
+      await openLinkDialog(tester);
+      await tester.tap(find.text('Remove link'));
+      await tester.pumpAndSettle();
+      expect(executor.commands, ['removeLink();']);
+    });
+  });
+
   testWidgets('a failed upload is reported and nothing is inserted',
       (tester) async {
     Object? reported;
@@ -136,5 +215,56 @@ void main() {
 
     expect(reported, isA<Exception>());
     expect(executor.commands, isEmpty);
+  });
+
+  testWidgets('embeds a picked image without getImageUrl', (tester) async {
+    final directory = Directory.systemTemp.createTempSync('rich_editor_test');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final image = File('${directory.path}/picked.png')
+      ..writeAsBytesSync([1, 2, 3]);
+
+    await tester.pumpWidget(_app(EditorToolBar(
+      javascriptExecutor: executor,
+      isWebViewLoaded: true,
+      items: const [ToolbarItem.image],
+      onUploadError: (error, _) => fail('$error'),
+    )));
+
+    final toolbarContext = tester.element(find.byType(TabButton));
+    await tester.tap(find.byType(TabButton));
+    await tester.pumpAndSettle();
+    Navigator.of(toolbarContext).pop<({String url, String alt, bool picked})>(
+        (url: image.path, alt: 'a', picked: true));
+    // Reading the file is real IO, done in several steps that each need the
+    // real event loop.
+    for (var i = 0; i < 20 && executor.commands.isEmpty; i++) {
+      await tester.pump();
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+    }
+
+    expect(executor.commands, [
+      'insertImage("data:image/png;base64,AQID", "a", 300, 300, 0);',
+    ]);
+  });
+
+  testWidgets('offers picking videos only with getVideoUrl', (tester) async {
+    Future<void> openVideoDialog({required bool canUpload}) async {
+      await tester.pumpWidget(const SizedBox()); // closes an open dialog
+      await tester.pumpWidget(_app(EditorToolBar(
+        javascriptExecutor: executor,
+        isWebViewLoaded: true,
+        items: const [ToolbarItem.video],
+        getVideoUrl: canUpload ? (File _) async => 'https://e.com/v.mp4' : null,
+      )));
+      await tester.tap(find.byType(TabButton));
+      await tester.pumpAndSettle();
+    }
+
+    await openVideoDialog(canUpload: false);
+    expect(find.byIcon(Icons.video_library), findsNothing);
+
+    await openVideoDialog(canUpload: true);
+    expect(find.byIcon(Icons.video_library), findsOneWidget);
   });
 }
