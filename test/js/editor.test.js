@@ -318,3 +318,77 @@ describe('focus', () => {
     assert.equal(e.window.document.activeElement, e.window.editor._textField);
   });
 });
+
+describe('links', () => {
+  // Puts the caret inside the text of the first link, like a user tapping it.
+  const caretInLink = () => {
+    const text = e.window.editor._textField.querySelector('a').firstChild;
+    const range = e.window.document.createRange();
+    range.setStart(text, 2);
+    range.collapse(true);
+    e.window.getSelection().removeAllRanges();
+    e.window.getSelection().addRange(range);
+    e.window.editor._backupRange();
+  };
+  const selectedText = () => e.window.getSelection().toString();
+
+  it('are reported with their URL while the caret is in one', () => {
+    e.editor.setHtml('<p>a <a href="https://e.com/x">link</a> b</p>');
+    assert.deepEqual(lastState().commandStates.link, { enabled: true, active: false, value: '' });
+    caretInLink();
+    e.editor._updateEditorState();
+    assert.deepEqual(lastState().commandStates.link, { enabled: true, active: true, value: 'https://e.com/x' });
+  });
+
+  it('can be changed as a whole', () => {
+    e.editor.setHtml('<p>a <a href="https://e.com/x">link</a> b</p>');
+    caretInLink();
+    const execCommand = e.window.document.execCommand;
+    let selectedForCommand;
+    e.window.document.execCommand = (...args) => {
+      selectedForCommand = selectedText();
+      return execCommand(...args);
+    };
+    try {
+      e.editor.editLink('https://e.com/y');
+    } finally {
+      e.window.document.execCommand = execCommand;
+    }
+    assert.equal(selectedForCommand, 'link');
+    assert.deepEqual(e.executed.slice(-1), [['createLink', 'https://e.com/y']]);
+    // the caret ends up after it, so tapping the link again finds it
+    assert.ok(e.window.getSelection().isCollapsed);
+  });
+
+  it('can be removed, keeping their text', () => {
+    e.editor.setHtml('<p>a <a href="https://e.com/x">link</a> b</p>');
+    caretInLink();
+    e.editor.removeLink();
+    assert.equal(selectedText(), 'link');
+    assert.deepEqual(e.executed.slice(-1), [['unlink', undefined]]);
+  });
+
+  it('are not changed to unsafe URLs, or outside a link', () => {
+    e.editor.setHtml('<p>a <a href="https://e.com/x">link</a> b</p>');
+    caretInLink();
+    const count = e.executed.length;
+    e.editor.editLink('javascript:x()');
+    e.placeCaretAtEnd();
+    e.editor.editLink('https://e.com/y');
+    e.editor.removeLink();
+    assert.equal(e.executed.length, count);
+  });
+});
+
+describe('text', () => {
+  it('is the content without markup or zero width spaces', () => {
+    // jsdom has no layout, so no innerText
+    Object.defineProperty(e.window.HTMLElement.prototype, 'innerText', {
+      get() { return this.textContent; },
+    });
+    e.editor.setHtml('<p>​a <b>b</b> &amp; c</p>');
+    assert.equal(decodeURIComponent(e.editor.getEncodedText()), 'a b & c');
+    e.editor.setHtml('');
+    assert.equal(decodeURIComponent(e.editor.getEncodedText()), '');
+  });
+});

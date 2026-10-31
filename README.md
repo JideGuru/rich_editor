@@ -30,6 +30,9 @@ Supports **Android** and **iOS**. The editor runs in a WebView
 - [x] Change notifications (`onChanged`) and a controller
 - [x] Customizable and localizable toolbar
 - [x] Read-only mode
+- [x] Edit and remove links
+- [x] Plain text output (`getText`)
+- [x] Follows the app's light and dark theme
 - [x] Pasted HTML is sanitized, and a Content-Security-Policy blocks scripts in the content
 - [ ] Search
 
@@ -79,11 +82,12 @@ with the editor; before that, `focus()` places the caret.
 Without `getImageUrl`, picked and pasted images are embedded in the HTML as
 `data:` URLs. Picking videos from the gallery needs `getVideoUrl`.
 
-Get or set the HTML
+Get or set the HTML, or get the plain text
 
 ```dart
 String html = await controller.getHtml(); // empty when the editor is empty
 await controller.setHtml('<p>Hello</p>');
+String text = await controller.getText(); // paragraphs on their own lines
 ```
 
 Set Focus and Unfocus

@@ -106,6 +106,12 @@ class RichEditorState extends State<RichEditor> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isWebViewLoaded) _applyColors();
+  }
+
+  @override
   void didUpdateWidget(RichEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
 
@@ -129,6 +135,7 @@ class RichEditorState extends State<RichEditor> {
     }
     if (widget.editorOptions != oldWidget.editorOptions) {
       _applyOptions(oldWidget.editorOptions);
+      _applyColors();
     }
     if (widget.readOnly != oldWidget.readOnly) {
       javascriptExecutor.setInputEnabled(!widget.readOnly);
@@ -191,6 +198,8 @@ class RichEditorState extends State<RichEditor> {
                   allowsLinkPreview: false,
                   isFraudulentWebsiteWarningEnabled: false,
                   disallowOverScroll: true,
+                  // no white flash before the editor colors are applied
+                  transparentBackground: true,
                   webViewAssetLoader: _usesLocalServer
                       ? null
                       : WebViewAssetLoader(
@@ -312,25 +321,46 @@ class RichEditorState extends State<RichEditor> {
   Future<void> _applyOptions([RichEditorOptions? old]) async {
     final options = widget.editorOptions;
     final executor = javascriptExecutor;
-    final background = options.backgroundColor;
-    final textColor = options.baseTextColor;
     final padding = options.padding;
     final fontFamily = options.baseFontFamily;
 
     if (padding != null && padding != old?.padding) {
       await executor.setPadding(padding);
     }
-    if (background != null && background != old?.backgroundColor) {
-      await executor.setBackgroundColor(background);
-    }
-    if (textColor != null && textColor != old?.baseTextColor) {
-      await executor.setBaseTextColor(textColor);
-    }
     if (old == null || options.placeholder != old.placeholder) {
       await executor.setPlaceholder(options.placeholder ?? '');
     }
     if (fontFamily != null && fontFamily != old?.baseFontFamily) {
       await executor.setBaseFontFamily(fontFamily);
+    }
+  }
+
+  /// The colors last sent to the editor page, so unchanged ones aren't sent
+  /// again.
+  ({Color background, Color text})? _appliedColors;
+
+  /// Colors the editor with [RichEditorOptions.backgroundColor] and
+  /// [RichEditorOptions.baseTextColor], or else the app's theme.
+  Future<void> _applyColors() async {
+    if (!mounted) return;
+    final options = widget.editorOptions;
+    final scheme = Theme.of(context).colorScheme;
+    final colors = (
+      background: options.backgroundColor ?? scheme.surface,
+      text: options.baseTextColor ?? scheme.onSurface,
+    );
+    final applied = _appliedColors;
+    if (colors == applied) return;
+    _appliedColors = colors;
+
+    final executor = javascriptExecutor;
+    if (colors.background != applied?.background) {
+      await executor.setBackgroundColor(colors.background);
+      await executor.setColorScheme(
+          ThemeData.estimateBrightnessForColor(colors.background));
+    }
+    if (colors.text != applied?.text) {
+      await executor.setBaseTextColor(colors.text);
     }
   }
 
@@ -349,6 +379,8 @@ class RichEditorState extends State<RichEditor> {
       final html = pendingHtml ?? widget.value;
       if (html != null) await controller.executor.setHtml(html);
       await _applyOptions();
+      _appliedColors = null;
+      await _applyColors();
       if (widget.readOnly) {
         await controller.executor.setInputEnabled(false);
       } else if (widget.autofocus) {

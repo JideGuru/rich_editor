@@ -35,6 +35,9 @@ body {
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
+  /* the same as normalize.css sets on html: set on the editable element too, or WebKit copies it
+     into a style attribute on everything inserted (links, images, the text around them) */
+  -webkit-text-size-adjust: 100%;
 }
 
 /* toggled by rich_text_editor.js: the editor always holds an empty paragraph, so :empty never matches */

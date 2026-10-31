@@ -138,6 +138,41 @@ void main() {
     expect(executor.commands, ['insertLink("https://e.com", "it\'s");']);
   });
 
+  group('with the caret in a link', () {
+    Future<void> openLinkDialog(WidgetTester tester) async {
+      await tester.pumpWidget(_app(EditorToolBar(
+        javascriptExecutor: executor,
+        isWebViewLoaded: true,
+        items: const [ToolbarItem.link],
+        commandStates: const {
+          EditorCommand.link:
+              CommandState(active: true, value: 'https://a.com'),
+        },
+      )));
+      expect(tester.widget<TabButton>(find.byType(TabButton)).selected, true);
+      await tester.tap(find.byType(TabButton));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('edits its URL', (tester) async {
+      await openLinkDialog(tester);
+      expect(find.byType(TextField), findsOneWidget); // no label to enter
+      expect(find.text('https://a.com'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'https://b.com');
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(executor.commands, ['editLink("https://b.com");']);
+    });
+
+    testWidgets('removes it', (tester) async {
+      await openLinkDialog(tester);
+      await tester.tap(find.text('Remove link'));
+      await tester.pumpAndSettle();
+      expect(executor.commands, ['removeLink();']);
+    });
+  });
+
   testWidgets('a failed upload is reported and nothing is inserted',
       (tester) async {
     Object? reported;

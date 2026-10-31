@@ -42,15 +42,25 @@ class JavascriptExecutorBase {
   /// plain ASCII; it is returned exactly as the editor holds it, entities
   /// included. Returns an empty string while the editor is empty or not
   /// loaded yet.
-  Future<String> getCurrentHtml() async {
-    String? html = (await executeJavascript('getEncodedHtml();'))?.toString();
-    if (html == null) return '';
+  Future<String> getCurrentHtml() => _getEncoded('getEncodedHtml();');
+
+  /// The editor content as plain text, paragraphs and line breaks as new
+  /// lines.
+  Future<String> getText() => _getEncoded('getEncodedText();');
+
+  /// Runs [command], which returns a string encoded with
+  /// `encodeURIComponent`, so it survives every platform's bridge.
+  Future<String> _getEncoded(String command) async {
+    String? encoded = (await executeJavascript(command))?.toString();
+    if (encoded == null) return '';
     // Some platforms hand back the JS string still wrapped in quotes.
     // encodeURIComponent never emits a quote, so stripping them is safe.
-    if (html.length >= 2 && html.startsWith('"') && html.endsWith('"')) {
-      html = html.substring(1, html.length - 1);
+    if (encoded.length >= 2 &&
+        encoded.startsWith('"') &&
+        encoded.endsWith('"')) {
+      encoded = encoded.substring(1, encoded.length - 1);
     }
-    return Uri.decodeComponent(html);
+    return Uri.decodeComponent(encoded);
   }
 
   /// Whether the editor holds no text and no media.
@@ -210,6 +220,19 @@ class JavascriptExecutorBase {
         "insertLink(${jsonEncode(url)}, ${jsonEncode(title)});");
   }
 
+  /// Changes the URL of the link the caret is in.
+  ///
+  /// Unsafe URLs such as `javascript:` are ignored by the editor.
+  Future<void> editLink(String url) async {
+    if (url.isEmpty) return;
+    await executeJavascript("editLink(${jsonEncode(url)});");
+  }
+
+  /// Removes the link the caret is in, keeping its text.
+  Future<void> removeLink() async {
+    await executeJavascript("removeLink();");
+  }
+
   /// The rotation parameter is used to signal that the image is rotated and should be rotated by CSS by given value.
   /// Rotation can be one of the following values: 0, 90, 180, 270.
   Future<void> insertImage(
@@ -296,6 +319,12 @@ class JavascriptExecutorBase {
   Future<void> setBackgroundColor(Color color) async {
     await executeJavascript(
         "setBackgroundColor(${jsonEncode(color.toCssColorString())});");
+  }
+
+  /// Colors links, checkboxes, the caret and selections for a light or dark
+  /// background.
+  Future<void> setColorScheme(Brightness brightness) async {
+    await executeJavascript("setColorScheme(${jsonEncode(brightness.name)});");
   }
 
   /// Set an image for the editor's background

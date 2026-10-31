@@ -494,6 +494,12 @@ var editor = {
         return clonedHtml.innerHTML;
     },
 
+    // The text without markup, paragraphs and line breaks as new lines.
+    getEncodedText: function() {
+        var text = this._isEmpty(this._textField) ? '' : this._textField.innerText;
+        return encodeURIComponent(text.replace(/\u200B/g, '').replace(/\n+$/, ''));
+    },
+
     getEncodedHtml: function() {
         return encodeURIComponent(this._getHtmlWithoutInternalModifications());
     },
@@ -840,6 +846,51 @@ var editor = {
         this._insertHtml(checkbox.outerHTML + '&nbsp;' + this._escapeHtml(text));
     },
 
+    // The link the caret or selection is in, if any.
+    _selectedLink: function() {
+        var selection = window.getSelection();
+        var node = selection.rangeCount > 0 ? selection.getRangeAt(0).commonAncestorContainer : null;
+        while(node && node !== this._textField) {
+            if(node.nodeName === 'A') {
+                return node;
+            }
+            node = node.parentNode;
+        }
+        return null;
+    },
+
+    // Selects the whole link the caret is in, so commands apply to all of it.
+    _selectLinkAtCaret: function() {
+        this._restoreRange();
+        var link = this._selectedLink();
+        if(link) {
+            var range = document.createRange();
+            range.selectNodeContents(link);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+        return link;
+    },
+
+    // Changes the URL of the link the caret is in.
+    editLink: function(url) {
+        var safeUrl = this._safeUrl(url);
+        if(safeUrl && this._selectLinkAtCaret()) {
+            this._executeCommand('createLink', safeUrl);
+            // leave the caret after the link: WebKit stretches the selection past it, and a tap on
+            // a selection on iOS keeps it, so the link would no longer be found under the caret
+            window.getSelection().collapseToEnd();
+        }
+    },
+
+    // Removes the link the caret is in, keeping its text.
+    removeLink: function() {
+        if(this._selectLinkAtCaret()) {
+            this._executeCommand('unlink');
+        }
+    },
+
     _checkboxClicked: function(clickedCheckbox) {
         // incredible, checked attribute doesn't get set in html, see issue https://github.com/dankito/RichTextEditor/issues/24
         if (clickedCheckbox.checked) {
@@ -893,6 +944,11 @@ var editor = {
 
     setBackgroundColor: function(color) {
         document.body.style.backgroundColor = color;
+    },
+
+    // 'light' or 'dark': the colors of links, checkboxes, the caret and selections.
+    setColorScheme: function(scheme) {
+        document.documentElement.style.colorScheme = scheme;
     },
     
     setBackgroundImage: function(image) {
@@ -1060,6 +1116,9 @@ var editor = {
             catch(e) { // unsupported command
             }
         }
+
+        var link = this._selectedLink();
+        commandStates['link'] = { 'enabled': true, 'active': !!link, 'value': link ? link.getAttribute('href') || '' : '' };
 
         return commandStates;
     },

@@ -36,6 +36,7 @@ class _BasicDemoState extends State<BasicDemo> {
             itemBuilder: (context) {
               return const [
                 PopupMenuItem(value: 0, child: Text('Get HTML')),
+                PopupMenuItem(value: 5, child: Text('Get text')),
                 PopupMenuItem(value: 1, child: Text('Set HTML')),
                 PopupMenuItem(value: 2, child: Text('Clear content')),
                 PopupMenuItem(value: 3, child: Text('Hide keyboard')),
@@ -55,6 +56,9 @@ class _BasicDemoState extends State<BasicDemo> {
                   await _controller.unFocus();
                 case 4:
                   await _controller.focus();
+                case 5:
+                  final text = await _controller.getText();
+                  debugPrint('Current text: $text');
               }
             },
           ),

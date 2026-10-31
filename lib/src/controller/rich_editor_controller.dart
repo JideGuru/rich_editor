@@ -37,6 +37,9 @@ class RichEditorController extends ValueNotifier<RichEditorValue> {
   /// Reads the current HTML from the editor.
   Future<String> getHtml() => executor.getCurrentHtml();
 
+  /// The content as plain text, paragraphs and line breaks as new lines.
+  Future<String> getText() => executor.getText();
+
   Future<void> clear() => setHtml('');
 
   Future<bool> isEmpty() => executor.isEmpty();

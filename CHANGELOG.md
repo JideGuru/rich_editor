@@ -17,12 +17,20 @@
 * Pasted and dropped images are uploaded with `getImageUrl` (or inserted as `data:`
   URLs without it), at the caret and without distortion.
 * Undo and Redo are greyed out when there is nothing to undo or redo.
+* Links can be edited and removed: the Link button is highlighted while the caret is
+  in a link and opens it for editing. `executor.editLink` / `removeLink`, and
+  `EditorCommand.link` reports the link at the caret.
+* `controller.getText()` returns the content as plain text.
+* The editor follows the app's light or dark theme unless `backgroundColor` /
+  `baseTextColor` are set, and colors links, checkboxes and the caret to match.
 * The editor page has a Content-Security-Policy that only runs the editor's own
   scripts, so scripts and inline handlers in the content never run.
 * Colors keep their transparency; the color picker opens at the color under the cursor
   and has a Cancel button.
 
 ### Fixed
+* On iOS, inserted links, images and the text around them no longer get a
+  `style="-webkit-text-size-adjust: 100%;"` attribute in the HTML.
 * Text containing `+` (e.g. "C++") lost characters when set with `setHtml`.
 * `getHtml` no longer decodes HTML entities, which turned typed text like `<b>` into real markup.
 * Strings with quotes or backslashes (fonts, placeholder, checkbox text, `insertHtml`, ...)

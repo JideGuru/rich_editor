@@ -160,4 +160,18 @@ void main() {
       expect(await executor.getCurrentHtml(), '');
     });
   });
+
+  test('getText reads the encoded text', () async {
+    executor.result = Uri.encodeComponent("C++ it's\nline 2");
+    expect(await executor.getText(), "C++ it's\nline 2");
+    expect(executor.commands.single, 'getEncodedText();');
+  });
+
+  test('editLink and removeLink', () async {
+    await executor.editLink('');
+    await executor.editLink("https://e.com/?q='x'");
+    await executor.removeLink();
+    expect(_args(executor.commands[0], 'editLink'), ["https://e.com/?q='x'"]);
+    expect(executor.commands[1], 'removeLink();');
+  });
 }
